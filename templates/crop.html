@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Crop Recommendation | Smart Krishi Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="crop-bg">
+    <a href="/home" class="home-shortcut right"><i class="fa fa-home"></i></a>
+    <div class="container d-flex flex-column align-items-center justify-content-center min-vh-100">
+        <div class="crop-transparent-box p-4">
+            <h2 class="mb-4 text-center">Crop Recommendation</h2>
+            <form method="POST" class="crop-form">
+                <div class="row crop-input-row mb-3">
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="N" placeholder="Nitrogen (N)" class="form-control crop-input" required></div>
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="P" placeholder="Phosphorus (P)" class="form-control crop-input" required></div>
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="K" placeholder="Potassium (K)" class="form-control crop-input" required></div>
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="temperature" placeholder="Temperature (°C)" class="form-control crop-input" required></div>
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="humidity" placeholder="Humidity (%)" class="form-control crop-input" required></div>
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="ph" placeholder="pH" class="form-control crop-input" required></div>
+                    <div class="col-12 col-md-6 mb-3"><input type="number" step="any" name="rainfall" placeholder="Rainfall (mm)" class="form-control crop-input" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 crop-btn">Recommend Crop</button>
+            </form>
+            {% if result %}
+            <div class="crop-result mt-3">🌱 Recommended Crop: <b>{{ result }}</b></div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

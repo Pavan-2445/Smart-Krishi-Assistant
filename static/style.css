@@ -1,0 +1,904 @@
+body {
+    background-color: #0f0f0f;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.container {
+    padding-top: 50px;
+}
+
+.card {
+    background-color: #447e41;
+    border: 1px solid #333;
+    border-radius: 15px;
+    padding: 20px;
+    color: #fff;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    border-color: navy;
+}
+
+.btn {
+    background-color: navy;
+    border: none;
+    color: white;
+}
+
+.btn:hover {
+    background-color: #004080;
+}
+
+/* General Centering */
+.center-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* Welcome Page Background */
+.welcome-bg {
+    background: url("https://mallport.co.uk/media/featured_images/Crop_and_Weather_Challenges.webp") no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* Typewriter Effect */
+.typewriter {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 3.5rem solid;
+    color: #ffffff;
+    overflow: hidden;
+    border-right: .15em solid #222;
+    white-space: nowrap;
+    margin: 0 auto 2rem auto;
+    letter-spacing: .1em;
+    animation: typing 1s steps(10, end) 1, blink-caret .75s step-end 4;
+}
+@keyframes typing {
+    from { width: 0 }
+    to { width: 50% }
+}
+@keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: #222; }
+}
+
+/* Welcome Button */
+.welcome-btn {
+    padding: 0.75rem 2rem;
+    background: #4e9af1;
+    color: #fff;
+    border: none;
+    border-radius: 2rem;
+    font-size: 1.2rem;
+    text-decoration: none;
+    box-shadow: 0 4px 16px rgba(78,154,241,0.15);
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-top: 2rem;
+}
+.welcome-btn:hover {
+    background: #2566a6;
+    box-shadow: 0 8px 32px rgba(78,154,241,0.25);
+}
+
+/* Home Page Background */
+.home-bg {
+    background: url('https://wallpaperbat.com/img/656036-welsh-landscape-wallpaper-top-free-welsh-landscape-background.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* Home Cards */
+.home-card {
+    background: #fff;
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    min-height: 220px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+.card-link {
+    text-decoration: none;
+}
+
+/* Shining Hover Effect */
+.shine-hover {
+    overflow: hidden;
+    position: relative;
+}
+.shine-hover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(120deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.2) 100%);
+    transform: rotate(25deg) translateX(-100%);
+    transition: transform 0.7s cubic-bezier(.4,2,.6,1);
+    pointer-events: none;
+    z-index: 2;
+}
+.shine-hover:hover::before {
+    transform: rotate(25deg) translateX(100%);
+}
+.shine-hover:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    transform: translateY(-6px) scale(1.03);
+}
+
+/* For later: shadow box, upload box, weather backgrounds, etc. */
+
+/* --- Crop Recommendation --- */
+.crop-bg {
+    background: url('https://static.vecteezy.com/system/resources/previews/031/696/054/large_2x/sprawling-agricultural-farm-featuring-fields-of-crops-ai-generated-photo.jpg') no-repeat center center fixed;
+    background-size: cover; 
+}
+.crop-shadow-box {
+    background: #fff;
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    padding: 2.5rem 2rem 2rem 2rem;
+    min-width: 350px;
+    max-width: 420px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.crop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.crop-form input {
+    padding: 0.7rem 0.5rem;
+    border: 1px solid #bdbdbd;
+    border-radius: 0.7rem;
+    font-size: 1rem;
+    outline: none;
+    transition: border 0.2s;
+}
+.crop-form input:focus {
+    border: 1.5px solid #4e9af1;
+}
+.crop-btn {
+    width: 100%;
+    padding: 0.8rem 0;
+    background: #4e9af1;
+    color: #fff;
+    border: none;
+    border-radius: 1.2rem;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.10);
+    transition: background 0.2s, box-shadow 0.2s;
+}
+.crop-btn:hover {
+    background: #2566a6;
+    box-shadow: 0 4px 16px rgba(78,154,241,0.18);
+}
+.crop-result {
+    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    color: #2566a6;
+    background: #eaf6ff;
+    border-radius: 1rem;
+    padding: 0.7rem 1.2rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.08);
+}
+
+/* --- Weather --- */
+.weather-box {
+    background: rgba(255,255,255,0.92);
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+    padding: 2.5rem 2rem 2rem 2rem;
+    min-width: 340px;
+    max-width: 400px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.weather-form {
+    display: flex;
+    gap: 0.7rem;
+    margin-bottom: 1.2rem;
+}
+.weather-form input {
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.7rem;
+    border: 1px solid #bdbdbd;
+    font-size: 1rem;
+}
+.weather-btn {
+    background: #4e9af1;
+    color: #fff;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+.weather-btn:hover {
+    background: #2566a6;
+}
+.weather-result {
+    margin-top: 1.2rem;
+    text-align: center;
+}
+.weather-emoji {
+    font-size: 2.5rem;
+    margin-bottom: 0.3rem;
+}
+.weather-info {
+    font-size: 1.3rem;
+    font-weight: 500;
+}
+.weather-location {
+    font-size: 1rem;
+    color: #555;
+    margin-top: 0.3rem;
+}
+/* Dynamic Weather Backgrounds */
+.weather-bg-default {
+    background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+    min-height: 100vh;
+}
+.weather-bg-sunny {
+    background: linear-gradient(120deg, #fceabb 0%, #f8b500 100%);
+    min-height: 100vh;
+    animation: sunnyAnim 10s linear infinite alternate;
+}
+@keyframes sunnyAnim {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.08); }
+}
+.weather-bg-cloudy {
+    background: linear-gradient(120deg, #d7d2cc 0%, #304352 100%);
+    min-height: 100vh;
+    animation: cloudyAnim 8s linear infinite alternate;
+}
+@keyframes cloudyAnim {
+    0% { filter: grayscale(0.1); }
+    100% { filter: grayscale(0.25); }
+}
+.weather-bg-rainy {
+    background: linear-gradient(120deg, #4e54c8 0%, #8f94fb 100%);
+    min-height: 100vh;
+    animation: rainyAnim 6s linear infinite alternate;
+}
+@keyframes rainyAnim {
+    0% { filter: blur(0px); }
+    100% { filter: blur(1px); }
+}
+.weather-bg-storm {
+    background: linear-gradient(120deg, #232526 0%, #414345 100%);
+    min-height: 100vh;
+    animation: stormAnim 5s linear infinite alternate;
+}
+@keyframes stormAnim {
+    0% { filter: contrast(1); }
+    100% { filter: contrast(1.15); }
+}
+.weather-bg-snowy {
+    background: linear-gradient(120deg, #e6dada 0%, #274046 100%);
+    min-height: 100vh;
+    animation: snowyAnim 8s linear infinite alternate;
+}
+@keyframes snowyAnim {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.12); }
+}
+
+/* --- Disease Detection --- */
+.disease-bg {
+    background: url('https://facts.net/wp-content/uploads/2023/06/leaves-of-Spathiphyllum-cannifolium-1024x682.jpeg') no-repeat center center fixed;
+    background-size: cover;
+}
+.disease-box {
+    background: #fff;
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+    padding: 2.5rem 2rem 2rem 2rem;
+    min-width: 340px;
+    max-width: 400px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.disease-upload-box {
+    border: 2px dashed #4e9af1;
+    border-radius: 1.2rem;
+    padding: 2rem 1.5rem;
+    background: #f4faff;
+    color: #2566a6;
+    font-size: 1.1rem;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 1.2rem;
+    transition: border 0.2s, background 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.disease-upload-box:hover {
+    border: 2px solid #2566a6;
+    background: #eaf6ff;
+}
+.disease-img-preview {
+    max-width: 180px;
+    max-height: 180px;
+    border-radius: 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.10);
+    display: block;
+}
+.disease-remove {
+    display: inline-block;
+    color: #fff;
+    background: #ff4e4e;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    text-align: center;
+    line-height: 28px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 8px 8px 0 0;
+    z-index: 10;
+}
+#imgPreviewContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.disease-btn {
+    width: 100%;
+    padding: 0.8rem 0;
+    background: #4e9af1;
+    color: #fff;
+    border: none;
+    border-radius: 1.2rem;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.10);
+    transition: background 0.2s, box-shadow 0.2s;
+}
+.disease-btn:hover {
+    background: #2566a6;
+    box-shadow: 0 4px 16px rgba(78,154,241,0.18);
+}
+.disease-result {
+    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    color: #2566a6;
+    background: #eaf6ff;
+    border-radius: 1rem;
+    padding: 0.7rem 1.2rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.08);
+}
+
+/* --- Font Contrast Improvements --- */
+
+body, .center-container, .home-card, .crop-shadow-box, .weather-box, .disease-box {
+    color: #1a1a1a;
+}
+
+h1, h2, h4, h5, h6 {
+    color: #1a1a1a;
+}
+
+.home-card h2, .home-card p {
+    color: #1a1a1a;
+}
+
+.crop-shadow-box h2, .weather-box h2, .disease-box h2 {
+    color: #2566a6;
+}
+
+.crop-result, .disease-result {
+    color: #2566a6;
+    background: #eaf6ff;
+}
+
+.weather-info {
+    color: #1a1a1a;
+}
+
+.weather-location {
+    color: #2566a6;
+}
+
+.weather-emoji {
+    color: #f8b500;
+}
+
+.crop-form input, .weather-form input {
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.crop-btn, .weather-btn, .disease-btn, .welcome-btn {
+    color: #fff;
+}
+
+.disease-upload-box {
+    color: #2566a6;
+}
+
+.disease-remove {
+    color: #fff;
+    background: #ff4e4e;
+}
+
+/* --- Home Shortcut Icon --- */
+.home-shortcut {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    font-size: 1.4rem;
+    color: #2566a6;
+    z-index: 1000;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.10);
+    padding: 0.3rem 0.5rem;
+    transition: background 0.2s, color 0.2s;
+}
+.home-shortcut.right {
+    left: auto;
+    right: 24px;
+    top: 24px;
+    font-size: 1.4rem;
+}
+.home-shortcut:hover {
+    background: linear-gradient(120deg, #bfc1c2 0%, #e6e6e6 100%);
+    color: #222;
+    box-shadow: 0 0 16px 2px #bfc1c2;
+}
+
+/* --- Improved Disease Upload Box --- */
+.disease-upload-box {
+    border: 2.5px dashed #4e9af1;
+    border-radius: 1.2rem;
+    padding: 2.5rem 2rem;
+    background: #f4faff;
+    color: #2566a6;
+    font-size: 1.1rem;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 1.2rem;
+    transition: border 0.2s, background 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.08);
+}
+.disease-upload-box:hover {
+    border: 2.5px solid #2566a6;
+    background: #eaf6ff;
+    box-shadow: 0 4px 16px rgba(78,154,241,0.18);
+}
+.disease-img-preview {
+    max-width: 220px;
+    max-height: 220px;
+    border-radius: 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.10);
+    display: block;
+}
+.disease-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 1.7rem;
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+#imgPreviewContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+/* --- Weather Animations --- */
+#weather-anim-bg {
+    position: absolute;
+    width: 100vw;
+    height: 220px;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+.clouds {
+    position: relative;
+    width: 100vw;
+    height: 220px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Add padding to the main container to prevent overlap with clouds */
+.weather-main-container {
+    padding-top: 220px;
+}
+
+/* --- Cloud Animations --- */
+.cloudanim {
+    animation-name: cloudMove;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+@keyframes cloudMove {
+    0% { left: -20vw; }
+    100% { left: 100vw; }
+}
+
+.cloud {
+    position: absolute;
+    background: #222;
+    border-radius: 50%;
+    opacity: 0.7;
+    width: 180px;
+    height: 80px;
+    top: 40px;
+    left: 10vw;
+    box-shadow: 60px 0 0 0 #222, 120px 0 0 0 #222, 90px 30px 0 0 #222;
+    animation-duration: 30s;
+}
+.cloud2 {
+    top: 90px;
+    left: 40vw;
+    width: 140px;
+    height: 60px;
+    opacity: 0.5;
+    box-shadow: 40px 0 0 0 #222, 80px 0 0 0 #222, 60px 20px 0 0 #222;
+    animation-duration: 40s;
+}
+.cloud3 {
+    top: 60px;
+    left: 70vw;
+    width: 120px;
+    height: 50px;
+    opacity: 0.4;
+    box-shadow: 30px 0 0 0 #222, 60px 0 0 0 #222, 45px 15px 0 0 #222;
+    animation-duration: 50s;
+}
+.rain-drops {
+    position: absolute;
+    top: 120px;
+    left: 0;
+    width: 100vw;
+    height: 120px;
+    pointer-events: none;
+    z-index: 1;
+}
+.raindrop {
+    position: absolute;
+    top: 0;
+    width: 6px;
+    height: 18px;
+    background: radial-gradient(ellipse at center, #bfc1c2 0%, #222 100%);
+    border-radius: 60% 60% 80% 80%;
+    opacity: 0.7;
+    animation: raindropFall 0.8s linear infinite;
+}
+@keyframes raindropFall {
+    0% { top: 0; opacity: 0.7; }
+    80% { opacity: 0.8; }
+    100% { top: 110px; opacity: 0; }
+}
+.sun-rays {
+    position: absolute;
+    top: 60px;
+    left: 50vw;
+    width: 120px;
+    height: 120px;
+    z-index: 0;
+    pointer-events: none;
+}
+.sun {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, #ffe066 60%, #f8b500 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 60px 20px #ffe066;
+    animation: sunPulse 2.5s ease-in-out infinite alternate;
+    z-index: 1;
+}
+.ray {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 40px;
+    background: linear-gradient(180deg, #fffbe6 0%, #ffe066 100%);
+    border-radius: 4px;
+    transform-origin: bottom center;
+    opacity: 0.7;
+    box-shadow: 0 0 8px 2px #ffe066;
+    z-index: 0;
+}
+@keyframes sunPulse {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.15); }
+}
+.snow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.7) 0px,
+        rgba(255,255,255,0.7) 2px,
+        transparent 2px,
+        transparent 12px
+    );
+    animation: snowMove 2s linear infinite;
+}
+@keyframes snowMove {
+    0% { background-position-x: 0; }
+    100% { background-position-x: 30px; }
+}
+
+/* --- Home Cards: Black/Grey + Silver Shine --- */
+.home-card {
+    background: linear-gradient(135deg, #326e32 50%, #414345 100%);
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    min-height: 220px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    color: #f1f1f1;
+    overflow: hidden;
+}
+.home-card h2, .home-card p {
+    color: #f1f1f1;
+}
+.shine-hover {
+    overflow: hidden;
+    position: relative;
+}
+.shine-hover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(120deg, rgba(192,192,192,0.1) 0%, rgba(255,255,255,0.7) 50%, rgba(192,192,192,0.1) 100%);
+    transform: rotate(25deg) translateX(-100%);
+    transition: transform 0.7s cubic-bezier(.4,2,.6,1);
+    pointer-events: none;
+    z-index: 2;
+}
+.shine-hover:hover::before {
+    transform: rotate(25deg) translateX(100%);
+    box-shadow: 0 0 32px 8px #bfc1c2;
+}
+.shine-hover:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+    transform: translateY(-6px) scale(1.03);
+}
+
+/* --- Crop Container Improvements --- */
+.crop-shadow-box {
+    min-width: 500px !important;
+    max-width: 600px !important;
+}
+.crop-grid {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.crop-grid .col-4 {
+    flex: 0 0 32%;
+    max-width: 32%;
+}
+
+/* --- Responsive --- */
+@media (max-width: 700px) {
+    .crop-shadow-box, .weather-box, .disease-box {
+        min-width: 90vw !important;
+        max-width: 98vw !important;
+        padding: 1.2rem !important;
+    }
+    .crop-grid .col-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .home-shortcut {
+        top: 10px;
+        left: 10px;
+        font-size: 1.5rem;
+        padding: 0.2rem 0.3rem;
+    }
+}
+
+/* --- Crop Transparent Box --- */
+.crop-transparent-box {
+    background: rgba(255,255,255,0.18);
+    border-radius: 2rem;
+    min-width: 500px;
+    max-width: 700px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: none !important;
+}
+
+/* --- Weather Transparent Box --- */
+.weather-transparent-box {
+    background: rgba(255,255,255,0.18);
+    border-radius: 2rem;
+    min-width: 340px;
+    max-width: 500px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: none !important;
+}
+
+/* --- More Clouds for Weather --- */
+.cloud4 {
+    top: 120px;
+    left: 20vw;
+    width: 100px;
+    height: 40px;
+    opacity: 0.3;
+    box-shadow: 20px 0 0 0 #222, 40px 0 0 0 #222, 30px 10px 0 0 #222;
+    animation-duration: 60s;
+}
+.cloud5 {
+    top: 30px;
+    left: 60vw;
+    width: 80px;
+    height: 30px;
+    opacity: 0.2;
+    box-shadow: 10px 0 0 0 #222, 20px 0 0 0 #222, 15px 5px 0 0 #222;
+    animation-duration: 35s;
+}
+.cloud6 {
+    top: 150px;
+    left: 10vw;
+    width: 120px;
+    height: 50px;
+    opacity: 0.25;
+    box-shadow: 30px 0 0 0 #222, 60px 0 0 0 #222, 45px 15px 0 0 #222;
+    animation-duration: 55s;
+}
+
+/* --- Blue Rain Droplets --- */
+.raindrop.blue {
+    background: radial-gradient(ellipse at center, #4e9af1 0%, #2566a6 100%);
+}
+
+/* --- Disease Upload Box Modern --- */
+.disease-upload-box {
+    min-width: 320px;
+    min-height: 220px;
+    max-width: 420px;
+    max-height: 320px;
+    padding: 3rem 2rem;
+    font-size: 1.2rem;
+    background: rgba(255,255,255,0.7);
+    border: 2.5px dashed #4e9af1;
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 24px rgba(78,154,241,0.10);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: border 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.disease-upload-box:hover {
+    border: 2.5px solid #2566a6;
+    background: #eaf6ff;
+    box-shadow: 0 8px 32px rgba(78,154,241,0.18);
+}
+.disease-img-preview {
+    max-width: 260px;
+    max-height: 200px;
+    border-radius: 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 8px rgba(78,154,241,0.10);
+    display: block;
+}
+.disease-remove {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 1.7rem;
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+#imgPreviewContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 700px) {
+    .crop-transparent-box, .weather-transparent-box, .disease-box {
+        min-width: 90vw !important;
+        max-width: 98vw !important;
+        padding: 1.2rem !important;
+    }
+    .disease-upload-box {
+        min-width: 90vw;
+        max-width: 98vw;
+        min-height: 120px;
+        max-height: 200px;
+        padding: 1.2rem;
+    }
+}
+
+/* --- Crop Input Stack --- */
+.crop-input-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+.crop-input {
+    width: 100%;
+    height: 48px;
+    opacity: 0.7;
+    border: none !important;
+    box-shadow: none !important;
+    background: rgba(255,255,255,0.7) !important;
+    color: #222;
+    font-size: 1.1rem;
+    border-radius: 0.7rem;
+    padding: 0 1rem;
+    transition: opacity 0.2s, background 0.2s;
+}
+.crop-input:focus {
+    opacity: 1;
+    background: #fff !important;
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Disease Detection | Smart Krishi Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    .disease-upload-icon {
+        font-size: 2.5rem;
+        color: #4e9af1;
+        margin-bottom: 0.5rem;
+    }
+    </style>
+</head>
+<body class="disease-bg">
+    <a href="/home" class="home-shortcut right"><i class="fa fa-home"></i></a>
+    <div class="container d-flex flex-column align-items-center justify-content-center min-vh-100">
+        <div class="card disease-box p-4">
+            <h2 class="mb-4 text-center">Disease Detection</h2>
+            <form method="POST" enctype="multipart/form-data" class="disease-form" id="diseaseForm">
+                <div id="imgPreviewContainer" class="mb-3"></div>
+                <label for="leafInput" class="disease-upload-box mb-3" id="uploadBox">
+                    <span class="disease-upload-icon"><i class="fa fa-upload"></i></span>
+                    <span>Upload Leaf Image</span>
+                    <input type="file" name="leaf" id="leafInput" accept="image/*" style="display:none;">
+                </label>
+                <button type="submit" class="btn btn-primary w-100 disease-btn">Detect Disease</button>
+            </form>
+            {% if result %}
+            <div class="disease-result mt-3">🦠 <b>{{ result }}</b></div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+    // Image preview and remove logic
+    const input = document.getElementById('leafInput');
+    const previewContainer = document.getElementById('imgPreviewContainer');
+    const uploadBox = document.getElementById('uploadBox');
+    input.addEventListener('change', function(e) {
+        previewContainer.innerHTML = '';
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.display = 'inline-block';
+                const img = document.createElement('img');
+                img.src = ev.target.result;
+                img.className = 'disease-img-preview';
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'disease-remove fa-stack';
+                removeBtn.innerHTML = '<i class="fa fa-circle fa-stack-2x" style="color:#ff4e4e;"></i><i class="fa fa-times fa-stack-1x fa-inverse"></i>';
+                removeBtn.style.position = 'absolute';
+                removeBtn.style.top = '8px';
+                removeBtn.style.right = '8px';
+                removeBtn.onclick = function() {
+                    input.value = '';
+                    previewContainer.innerHTML = '';
+                };
+                wrapper.appendChild(img);
+                wrapper.appendChild(removeBtn);
+                previewContainer.appendChild(wrapper);
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    });
+    </script>
+</body>
+</html>
