@@ -1,1 +1,7 @@
- 
+flask
+pillow
+torch
+transformers
+scikit-learn
+joblib
+requests 
