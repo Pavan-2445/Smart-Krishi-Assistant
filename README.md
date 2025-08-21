@@ -102,7 +102,10 @@ Smart Krishi Assistant/
 - Port conflicts locally:
   - Set a custom `PORT`, e.g. `PORT=5000`, then `python app.py`
 
-## Credits
+## Acknowledgements
 - Weather data: `weatherapi.com`
 - Geocoding: Nominatim (OpenStreetMap)
 - Disease detection: Pretrained vision model (Hugging Face)
+
+## Live Demo 
+- You can check out the live app here : https://smart-krishi-assistant.onrender.com
