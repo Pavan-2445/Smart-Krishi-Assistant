@@ -109,3 +109,7 @@ Smart Krishi Assistant/
 
 ## Live Demo 
 - You can check out the live app here : https://smart-krishi-assistant.onrender.com
+
+<img width="1923" height="865" alt="image" src="https://github.com/user-attachments/assets/dd3be727-5cbb-4512-ba75-44461a67343e" />
+
+<img width="1922" height="874" alt="image" src="https://github.com/user-attachments/assets/2eb02407-2026-472d-a1a9-aa977f432748" />
