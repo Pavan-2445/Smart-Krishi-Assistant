@@ -112,4 +112,10 @@ Smart Krishi Assistant/
 
 <img width="1923" height="865" alt="image" src="https://github.com/user-attachments/assets/dd3be727-5cbb-4512-ba75-44461a67343e" />
 
-<img width="1922" height="874" alt="image" src="https://github.com/user-attachments/assets/2eb02407-2026-472d-a1a9-aa977f432748" />
+<img width="1923" height="865" alt="image" src="https://github.com/user-attachments/assets/2eb02407-2026-472d-a1a9-aa977f432748" />
+
+<img width="1923" height="865" alt="image" src="https://github.com/user-attachments/assets/d4072ee8-5b78-44ba-8f9f-b358d917458c" />
+
+<img width="1923" height="865" alt="image" src="https://github.com/user-attachments/assets/14fa090f-848e-4b75-9578-3bc38e84fa0f" />
+
+<img width="1923" height="865" alt="image" src="https://github.com/user-attachments/assets/d11d09e4-1b5b-4ec3-895b-70ed7cea7dee" />
