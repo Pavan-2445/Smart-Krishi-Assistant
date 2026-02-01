@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ t('welcome_title') }} | {{ t('app_name') }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="welcome-bg">
+    <div id="emoji-loader" class="emoji-loader">
+        <div class="emoji-loader-orbit">
+            <span>🌾</span>
+            <span>☁️</span>
+            <span>🌱</span>
+            <span>🌦️</span>
+            <div class="emoji-loader-center">🚜</div>
+        </div>
+    </div>
+    <div class="lang-switch">
+        <a class="lang-pill {% if current_lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang_code='en', next=request.full_path) }}">EN</a>
+        <a class="lang-pill {% if current_lang == 'hi' %}active{% endif %}" href="{{ url_for('set_language', lang_code='hi', next=request.full_path) }}">HI</a>
+        <a class="lang-pill {% if current_lang == 'te' %}active{% endif %}" href="{{ url_for('set_language', lang_code='te', next=request.full_path) }}">TE</a>
+    </div>
+    <div class="center-container">
+        <h1 class="typewriter">{{ t('welcome_title') }}</h1>
+        {% if current_user %}
+            <a href="/home" class="welcome-btn">{{ t('get_started') }}</a>
+            <a href="/logout" class="welcome-btn secondary">{{ t('logout') }}</a>
+        {% else %}
+            <div class="welcome-actions">
+                <a href="/login" class="welcome-btn">{{ t('login') }}</a>
+                <a href="/register" class="welcome-btn secondary">{{ t('register') }}</a>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const loader = document.getElementById('emoji-loader');
+            if (!loader) return;
+            loader.classList.add('show');
+            setTimeout(() => loader.classList.remove('show'), 1000);
+        });
+    </script>
+</body>
+</html>

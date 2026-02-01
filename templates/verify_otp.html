@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ t('otp_title') }} | {{ t('app_name') }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-bg">
+  <div id="emoji-loader" class="emoji-loader">
+    <div class="emoji-loader-orbit">
+      <span>🌾</span>
+      <span>☁️</span>
+      <span>🌱</span>
+      <span>🌦️</span>
+      <div class="emoji-loader-center">🚜</div>
+    </div>
+  </div>
+
+  <div class="lang-switch">
+    <a class="lang-pill {% if current_lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang_code='en', next=request.full_path) }}">EN</a>
+    <a class="lang-pill {% if current_lang == 'hi' %}active{% endif %}" href="{{ url_for('set_language', lang_code='hi', next=request.full_path) }}">HI</a>
+    <a class="lang-pill {% if current_lang == 'te' %}active{% endif %}" href="{{ url_for('set_language', lang_code='te', next=request.full_path) }}">TE</a>
+  </div>
+
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo">SK</div>
+        <div class="auth-brand-text">
+          <div class="auth-app">{{ t('app_name') }}</div>
+          <div class="auth-muted">{{ t('otp_subtitle') }}</div>
+        </div>
+      </div>
+
+      <h1 class="auth-title">{{ t('otp_title') }}</h1>
+
+      <div id="toast-container" class="toast-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <form method="POST" class="auth-form otp-form">
+        <input type="hidden" name="email" value="{{ email }}">
+        <input type="hidden" name="purpose" value="{{ purpose | default('verify') }}">
+        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+        <label class="auth-label" for="otp-hidden">{{ t('otp_label') }}</label>
+        <input type="hidden" id="otp-hidden" name="otp" />
+        <div class="otp-grid">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="0" />
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="1" />
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="2" />
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="3" />
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="4" />
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="5" />
+        </div>
+
+        <button class="auth-btn" type="submit">{{ t('verify') }}</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const loader = document.getElementById('emoji-loader');
+      if (loader) {
+        loader.classList.add('show');
+        setTimeout(() => loader.classList.remove('show'), 1000);
+      }
+
+      const boxes = Array.from(document.querySelectorAll('.otp-box'));
+      const hidden = document.getElementById('otp-hidden');
+      function syncHidden() {
+        hidden.value = boxes.map(b => b.value || '').join('');
+      }
+      boxes.forEach((box, idx) => {
+        box.addEventListener('input', (e) => {
+          const v = e.target.value.replace(/\D/g, '').slice(0, 1);
+          e.target.value = v;
+          if (v && idx < boxes.length - 1) {
+            boxes[idx + 1].focus();
+          }
+          syncHidden();
+        });
+        box.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+            boxes[idx - 1].focus();
+          }
+        });
+      });
+      if (boxes.length) boxes[0].focus();
+
+      // Toasts
+      const toasts = document.querySelectorAll('.toast');
+      toasts.forEach((t, i) => {
+        setTimeout(() => t.classList.add('show'), 50 + i * 200);
+        setTimeout(() => t.classList.remove('show'), 4500 + i * 200);
+      });
+
+      // If server flagged to show set-password panel (rendered inline), focus and attach toggles
+      const setPanel = document.querySelector('.set-password-panel');
+      if (setPanel) {
+        const pwd = document.getElementById('password');
+        const confirmPwd = document.getElementById('confirm_password');
+        if (pwd) pwd.focus();
+
+        function eyeSVG(open) {
+          if (open) return '<svg class="eye-icon eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          return '<svg class="eye-icon eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.94 17.94C16.05 19.16 14.07 20 12 20c-5.27 0-9.64-3.11-11-7 1.04-2.35 2.79-4.3 4.86-5.58M6.34 6.34C7.95 5.16 9.93 4.32 12 4.32c5.27 0 9.64 3.11 11 7-1.04 2.35-2.79 4.3-4.86 5.58" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+
+        const togglePwd = document.getElementById('toggle-set-password');
+        if (togglePwd && pwd) {
+          togglePwd.addEventListener('click', function () {
+            const t = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+            pwd.setAttribute('type', t);
+            togglePwd.innerHTML = eyeSVG(t === 'text');
+          });
+        }
+        const toggleConfirm = document.getElementById('toggle-confirm-password');
+        if (toggleConfirm && confirmPwd) {
+          toggleConfirm.addEventListener('click', function () {
+            const t = confirmPwd.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmPwd.setAttribute('type', t);
+            toggleConfirm.innerHTML = eyeSVG(t === 'text');
+          });
+        }
+      }
+
+    });
+  </script>
+</body>
+</html>
+
+

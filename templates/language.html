@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ t('choose_language') }} | {{ t('app_name') }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-bg">
+  <div id="emoji-loader" class="emoji-loader">
+    <div class="emoji-loader-orbit">
+      <span>🌾</span>
+      <span>☁️</span>
+      <span>🌱</span>
+      <span>🌦️</span>
+      <div class="emoji-loader-center">🚜</div>
+    </div>
+  </div>
+  <div class="auth-shell">
+    <div class="auth-card auth-card-wide">
+      <div class="auth-brand">
+        <div class="auth-logo">SK</div>
+        <div class="auth-brand-text">
+          <div class="auth-app">{{ t('app_name') }}</div>
+          <div class="auth-muted">{{ t('choose_language_subtitle') }}</div>
+        </div>
+      </div>
+
+      <h1 class="auth-title">{{ t('choose_language') }}</h1>
+
+      <div class="lang-grid">
+        <a class="lang-tile" href="{{ url_for('set_language', lang_code='en', next=next_url) }}">
+          <div class="lang-name">English</div>
+          <div class="lang-code">EN</div>
+        </a>
+        <a class="lang-tile" href="{{ url_for('set_language', lang_code='hi', next=next_url) }}">
+          <div class="lang-name">हिन्दी</div>
+          <div class="lang-code">HI</div>
+        </a>
+        <a class="lang-tile" href="{{ url_for('set_language', lang_code='te', next=next_url) }}">
+          <div class="lang-name">తెలుగు</div>
+          <div class="lang-code">TE</div>
+        </a>
+      </div>
+
+      <div class="auth-footer">
+        <span class="auth-muted">Next:</span>
+        <span class="auth-footer-strong">Login / Register</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const loader = document.getElementById('emoji-loader');
+      if (!loader) return;
+      loader.classList.add('show');
+      setTimeout(() => loader.classList.remove('show'), 1000);
+    });
+  </script>
+</body>
+</html>
+
+

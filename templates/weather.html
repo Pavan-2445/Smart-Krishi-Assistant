@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('weather_page_title') }} | {{ t('app_name') }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+    // Use tojson so server-side text is safely escaped into JS
+    var cond = {{ (forecast_data.condition|default(''))|lower|tojson }};
+    document.addEventListener('DOMContentLoaded', function() {
+        let bg = 'weather-bg-default';
+        if (cond && cond.includes('rain')) bg = 'weather-bg-rainy';
+        else if (cond && cond.includes('cloud')) bg = 'weather-bg-cloudy';
+        else if (cond && (cond.includes('sun') || cond.includes('clear') || cond.includes('sunny'))) bg = 'weather-bg-sunny';
+        else if (cond && cond.includes('storm')) bg = 'weather-bg-storm';
+        else if (cond && cond.includes('snow')) bg = 'weather-bg-snowy';
+        document.body.classList.add(bg);
+    });
+    </script>
+</head>
+<body>
+    <div id="emoji-loader" class="emoji-loader">
+        <div class="emoji-loader-orbit">
+            <span>🌾</span>
+            <span>☁️</span>
+            <span>🌱</span>
+            <span>🌦️</span>
+            <div class="emoji-loader-center">🚜</div>
+        </div>
+    </div>
+    <div class="lang-switch">
+        <a class="lang-pill {% if current_lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang_code='en', next=request.full_path) }}">EN</a>
+        <a class="lang-pill {% if current_lang == 'hi' %}active{% endif %}" href="{{ url_for('set_language', lang_code='hi', next=request.full_path) }}">HI</a>
+        <a class="lang-pill {% if current_lang == 'te' %}active{% endif %}" href="{{ url_for('set_language', lang_code='te', next=request.full_path) }}">TE</a>
+        {% if current_user %}
+        <a class="lang-pill" href="{{ url_for('logout') }}">{{ t('logout') }}</a>
+        {% endif %}
+    </div>
+    <a href="/home" class="home-shortcut left"><i class="fa fa-home"></i></a>
+    <div id="weather-anim-bg">
+        {% if forecast_data and forecast_data.condition and ('rain' in (forecast_data.condition|lower)) %}
+        <div class="clouds">
+            <div class="cloud cloudanim"></div>
+            <div class="cloud cloud2 cloudanim"></div>
+            <div class="cloud cloud3 cloudanim"></div>
+            <div class="cloud cloud4 cloudanim"></div>
+            <div class="cloud cloud5 cloudanim"></div>
+            <div class="cloud cloud6 cloudanim"></div>
+            <div class="rain-drops">
+                {% for i in range(30) %}
+                <div class="raindrop blue" style="left: {{ (i*3+10)%100 }}%; animation-delay: {{ (i%10)*0.1 }}s;"></div>
+                {% endfor %}
+            </div>
+        </div>
+        {% elif forecast_data and forecast_data.condition and ('cloud' in (forecast_data.condition|lower)) %}
+        <div class="clouds">
+            <div class="cloud cloudanim"></div>
+            <div class="cloud cloud2 cloudanim"></div>
+            <div class="cloud cloud3 cloudanim"></div>
+            <div class="cloud cloud4 cloudanim"></div>
+            <div class="cloud cloud5 cloudanim"></div>
+            <div class="cloud cloud6 cloudanim"></div>
+        </div>
+        {% elif forecast_data and forecast_data.condition and (('sun' in (forecast_data.condition|lower)) or ('clear' in (forecast_data.condition|lower)) or ('sunny' in (forecast_data.condition|lower))) %}
+        <div class="sun-rays">
+            <div class="sun"></div>
+            {% for i in range(12) %}
+            <div class="ray" style="transform: rotate({{ i*30 }}deg) translate(60px);"></div>
+            {% endfor %}
+        </div>
+        {% elif forecast_data and forecast_data.condition and ('snow' in (forecast_data.condition|lower)) %}
+        <div class="snow"></div>
+        {% endif %}
+    </div>
+    <div class="container weather-main-container d-flex flex-column align-items-center justify-content-center min-vh-100">
+        <div class="weather-transparent-box p-4">
+            <h2 class="mb-3 text-center">{{ t('weather_page_title') }}</h2>
+            <form method="POST" class="weather-form mb-3 d-flex gap-2 align-items-stretch">
+                <input type="text" name="location" value="{{ request.form.get('location','') }}" placeholder="{{ t('weather_placeholder') }}" class="form-control flex-grow-1" aria-label="Location" required>
+                <button type="submit" class="btn btn-primary weather-btn" aria-label="Get weather">{{ t('weather_page_title') }}</button>
+            </form>
+            <div class="weather-tip mb-2 text-center text-muted" style="font-size: 1rem;" aria-live="polite">{{ t('weather_tip') }}</div>
+            {% if forecast_data and forecast_data.forecast %}
+            <div class="weather-result mt-3" role="status" aria-live="polite">
+                <div class="weather-emoji" aria-hidden="true">{{ forecast_data.emoji }}</div>
+                <div class="weather-info">{{ forecast_data.forecast }}</div>
+                <div class="weather-location">📍 {{ forecast_data.location }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const loader = document.getElementById('emoji-loader');
+            if (!loader) return;
+            loader.classList.add('show');
+            setTimeout(() => loader.classList.remove('show'), 1000);
+        });
+    </script>
+</body>
+</html>

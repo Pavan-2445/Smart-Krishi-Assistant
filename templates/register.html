@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ t('register') }} | {{ t('app_name') }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-bg">
+  <div id="emoji-loader" class="emoji-loader">
+    <div class="emoji-loader-orbit">
+      <span>🌾</span>
+      <span>☁️</span>
+      <span>🌱</span>
+      <span>🌦️</span>
+      <div class="emoji-loader-center">🚜</div>
+    </div>
+  </div>
+  <div class="lang-switch">
+    <a class="lang-pill {% if current_lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang_code='en', next=request.full_path) }}">EN</a>
+    <a class="lang-pill {% if current_lang == 'hi' %}active{% endif %}" href="{{ url_for('set_language', lang_code='hi', next=request.full_path) }}">HI</a>
+    <a class="lang-pill {% if current_lang == 'te' %}active{% endif %}" href="{{ url_for('set_language', lang_code='te', next=request.full_path) }}">TE</a>
+  </div>
+
+  <div class="auth-shell">
+    <div class="auth-layout">
+      <div class="auth-side auth-side-form">
+        <div class="auth-card">
+          <div class="auth-brand">
+            <div class="auth-logo">SK</div>
+            <div class="auth-brand-text">
+              <div class="auth-app">{{ t('app_name') }}</div>
+              <div class="auth-muted">{{ t('register_subtitle') }}</div>
+            </div>
+          </div>
+
+          <h1 class="auth-title">{{ t('register_title') }}</h1>
+
+          <div id="toast-container" class="toast-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="toast {{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </div>
+
+          <form method="POST" class="auth-form" id="register-form">
+            <label class="auth-label" for="occupation">{{ t('occupation') }}</label>
+            <select class="auth-input" id="occupation" name="occupation" required>
+              <option value="" disabled selected>Select your occupation</option>
+              <option value="Farmer">Farmer</option>
+              <option value="Student">Student</option>
+              <option value="Engineer">Engineer</option>
+              <option value="Teacher">Teacher</option>
+              <option value="Researcher">Researcher</option>
+              <option value="Business">Business Man</option>
+              <option value="Government Employee">Government Official</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <!-- Farmer specific fields -->
+            <div id="farmer-fields" style="display:none;">
+              <label class="auth-label" for="phone">Phone Number</label>
+              <input class="auth-input" type="text" id="phone" name="phone" placeholder="10-digit phone" inputmode="numeric" pattern="[0-9]{6,15}" />
+
+              <label class="auth-label" for="farmer-name">{{ t('name') }}</label>
+              <input class="auth-input" type="text" id="farmer-name" name="farmer_name" placeholder="Full name" autocomplete="name" />
+
+              <label class="auth-label" for="pincode">{{ t('pincode') }}</label>
+              <input class="auth-input" type="text" id="farmer-pincode" name="pincode" placeholder="6-digit pincode" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" />
+
+              <label class="auth-label" for="location">City / Location</label>
+              <input class="auth-input" type="text" id="location" name="location" placeholder="Auto-filled from pincode" readonly />
+
+              <label class="auth-label" for="farmer-pin">6-digit PIN</label>
+              <div class="password-row">
+                <input class="auth-input" type="password" id="farmer-pin" name="farmer_pin" placeholder="6-digit PIN" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" />
+                <button type="button" class="icon-btn" id="toggle-farmer-pin" aria-label="Show PIN">👁️</button>
+                <label style="display:flex;align-items:center;gap:6px;margin-left:8px;" title="Show PIN">
+                  <input type="checkbox" id="show-farmer-pin" /> Show
+                </label>
+              </div>
+            </div>
+
+            <!-- Non-farmer fields -->
+            <div id="general-fields" style="display:none;">
+              <label class="auth-label" for="name">{{ t('name') }}</label>
+              <input class="auth-input" type="text" id="user-name" name="name" placeholder="Full name" autocomplete="name" />
+
+              <label class="auth-label" for="email">{{ t('email') }}</label>
+              <input class="auth-input" type="email" id="email" name="email" placeholder="name@example.com" autocomplete="email" />
+
+              <div class="auth-muted" style="font-size:0.9rem;margin-top:6px;">After verification we will ask you to set a secure password (letters, numbers & symbols).</div>
+            </div>
+
+            <button class="auth-btn" type="submit">{{ t('register') }}</button>
+          </form>
+
+          <div class="auth-footer">
+            <span class="auth-muted">{{ t('have_account') }}</span>
+            <a class="auth-link" href="{{ url_for('login') }}">{{ t('login') }}</a>
+          </div>
+        </div>
+      </div>
+      <div class="auth-side auth-side-scene">
+        <div class="auth-scene">
+          <div class="auth-scene-forest">
+            <div class="auth-tree">
+              <div class="auth-tree-crown"></div>
+              <div class="auth-tree-trunk"></div>
+            </div>
+            <div class="leaf-layer">
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+            </div>
+            <div class="auth-scene-ground"></div>
+            <div class="cat-wrap">
+              <div class="cat" id="register-cat">
+                <div class="cat-body"></div>
+                <div class="cat-face">
+                  <div class="cat-ear left"><div class="cat-inner-ear"></div></div>
+                  <div class="cat-ear right"><div class="cat-inner-ear"></div></div>
+                  <div class="cat-eye left">
+                    <div class="cat-pupil"></div>
+                    <div class="cat-eye-lid"></div>
+                  </div>
+                  <div class="cat-eye right">
+                    <div class="cat-pupil"></div>
+                    <div class="cat-eye-lid"></div>
+                  </div>
+                  <div class="cat-nose"></div>
+                  <div class="cat-mouth"></div>
+                </div>
+                <div class="cat-tail"></div>
+                <div class="cat-grass"></div>
+              </div>
+            </div>
+            <div class="farmer-wrap">
+              <div class="farmer" id="register-farmer">
+                <div class="farmer-body"></div>
+                <div class="farmer-head">
+                  <div class="farmer-hat"></div>
+                  <div class="farmer-eye left">
+                    <div class="farmer-pupil"></div>
+                    <div class="farmer-eye-lid"></div>
+                  </div>
+                  <div class="farmer-eye right">
+                    <div class="farmer-pupil"></div>
+                    <div class="farmer-eye-lid"></div>
+                  </div>
+                  <div class="farmer-mouth"></div>
+                </div>
+                <div class="farmer-arm">
+                  <div class="farmer-hand"></div>
+                  <div class="farmer-lens">
+                    <div class="farmer-lens-handle"></div>
+                  </div>
+                </div>
+                <div class="farmer-grass"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const loader = document.getElementById('emoji-loader');
+      if (loader) {
+        loader.classList.add('show');
+        setTimeout(() => loader.classList.remove('show'), 1000);
+      }
+
+      // Scene blinks
+      const cat = document.getElementById('register-cat');
+      const farmer = document.getElementById('register-farmer');
+      function setBlink(on) {
+        if (cat) cat.classList.toggle('cat-blink', on);
+        if (farmer) farmer.classList.toggle('farmer-blink', on);
+      }
+
+      // Occupation-driven UI
+      const occ = document.getElementById('occupation');
+      const farmerFields = document.getElementById('farmer-fields');
+      const generalFields = document.getElementById('general-fields');
+      const pincodeInput = document.getElementById('farmer-pincode');
+      const locationInput = document.getElementById('location');
+      const toggleFarmerPin = document.getElementById('toggle-farmer-pin');
+      const farmerPinInput = document.getElementById('farmer-pin');
+
+      function showForOccupation() {
+        const val = (occ.value || '');
+        if (val === 'Farmer') {
+          farmerFields.style.display = 'block';
+          generalFields.style.display = 'none';
+        } else if (val) {
+          farmerFields.style.display = 'none';
+          generalFields.style.display = 'block';
+        } else {
+          farmerFields.style.display = 'none';
+          generalFields.style.display = 'none';
+        }
+      }
+
+      if (occ) {
+        occ.addEventListener('change', showForOccupation);
+        showForOccupation();
+      }
+
+      // Toggle PIN visibility (uses inline SVGs)
+      function eyeSVGSmall(open) {
+        if (open) return '<svg class="eye-icon eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        return '<svg class="eye-icon eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.94 17.94C16.05 19.16 14.07 20 12 20c-5.27 0-9.64-3.11-11-7 1.04-2.35 2.79-4.3 4.86-5.58M6.34 6.34C7.95 5.16 9.93 4.32 12 4.32c5.27 0 9.64 3.11 11 7-1.04 2.35-2.79 4.3-4.86 5.58" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      if (toggleFarmerPin && farmerPinInput) {
+        toggleFarmerPin.addEventListener('click', function () {
+          const t = farmerPinInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          farmerPinInput.setAttribute('type', t);
+          toggleFarmerPin.innerHTML = eyeSVGSmall(t === 'text');
+          setBlink(t === 'text');
+        });
+      }
+
+      // Auto-fill location from pincode
+      async function fillLocationFromPincode() {
+        const p = (pincodeInput.value || '').trim();
+        if (!p || p.length !== 6) return;
+        try {
+          const res = await fetch(`/api/geocode-pincode?pincode=${p}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data && data.display_name) {
+            // Try to extract city-like fragment
+            locationInput.value = data.display_name.split(',')[0];
+          }
+        } catch (err) {
+          console.warn('Geocode failed', err);
+        }
+      }
+
+      if (pincodeInput) {
+        pincodeInput.addEventListener('blur', fillLocationFromPincode);
+        pincodeInput.addEventListener('input', function () {
+          const v = (pincodeInput.value || '').trim();
+          if (v.length === 6) fillLocationFromPincode();
+        });
+      }
+
+      // Show PIN checkbox for farmers (for accessibility)
+      const showFarmerPinCheck = document.getElementById('show-farmer-pin');
+      if (showFarmerPinCheck && farmerPinInput) {
+        showFarmerPinCheck.addEventListener('change', function () {
+          farmerPinInput.setAttribute('type', this.checked ? 'text' : 'password');
+        });
+      }
+
+      // Basic form validation before submit
+      const form = document.getElementById('register-form');
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          const val = (occ.value || '');
+          if (val === 'Farmer') {
+            const phone = document.getElementById('phone').value.trim();
+            const name = document.getElementById('farmer-name').value.trim();
+            const pincode = pincodeInput.value.trim();
+            const pin = farmerPinInput.value.trim();
+            if (!phone || !name || !pincode || !pin) {
+              e.preventDefault();
+              alert('Please fill all farmer fields');
+            }
+            if (!/^[0-9]{6}$/.test(pin)) {
+              e.preventDefault();
+              alert('Farmer PIN must be 6 digits');
+            }
+          } else {
+            const name = document.getElementById('user-name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            if (!name || !email) {
+              e.preventDefault();
+              alert('Please enter name and email');
+            }
+          }
+        });
+      }
+
+      // Toasts: animate and auto-dismiss
+      const toasts = document.querySelectorAll('#toast-container .toast');
+      toasts.forEach((t, i) => {
+        setTimeout(() => t.classList.add('show'), 50 + i * 200);
+        setTimeout(() => t.classList.remove('show'), 5000 + i * 200);
+      });
+
+    });
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ t('login') }} | {{ t('app_name') }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-bg">
+  <div id="emoji-loader" class="emoji-loader">
+    <div class="emoji-loader-orbit">
+      <span>🌾</span>
+      <span>☁️</span>
+      <span>🌱</span>
+      <span>🌦️</span>
+      <div class="emoji-loader-center">🚜</div>
+    </div>
+  </div>
+  <div class="lang-switch">
+    <a class="lang-pill {% if current_lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang_code='en', next=request.full_path) }}">EN</a>
+    <a class="lang-pill {% if current_lang == 'hi' %}active{% endif %}" href="{{ url_for('set_language', lang_code='hi', next=request.full_path) }}">HI</a>
+    <a class="lang-pill {% if current_lang == 'te' %}active{% endif %}" href="{{ url_for('set_language', lang_code='te', next=request.full_path) }}">TE</a>
+  </div>
+
+  <div class="auth-shell">
+    <div class="auth-layout">
+      <div class="auth-side auth-side-form">
+        <div class="auth-card">
+          <div class="auth-brand">
+            <div class="auth-logo">SK</div>
+            <div class="auth-brand-text">
+              <div class="auth-app">{{ t('app_name') }}</div>
+              <div class="auth-muted">{{ t('login_subtitle') }}</div>
+            </div>
+          </div>
+
+          <h1 class="auth-title">{{ t('login_title') }}</h1>
+
+          <div id="toast-container" class="toast-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="toast {{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </div>
+
+          <form method="POST" class="auth-form" id="login-form">
+            <label class="auth-label" for="identifier">Email or Phone</label>
+            <input class="auth-input" type="text" id="identifier" name="identifier" placeholder="name@example.com or phone" autocomplete="email" required />
+
+            <div id="password-row">
+              <label class="auth-label" for="password">{{ t('password') }}</label>
+              <div class="password-row input-with-icon">
+                <input class="auth-input" type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" />
+                <button type="button" id="toggle-password" class="input-icon" aria-label="Show password">
+                  <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div id="pin-row" style="display:none;">
+              <label class="auth-label" for="pin">6-digit PIN</label>
+              <div class="password-row input-with-icon">
+                <input class="auth-input" type="password" id="pin" name="pin" placeholder="6-digit PIN" inputmode="numeric" maxlength="6" />
+                <button type="button" id="toggle-pin" class="input-icon" aria-label="Show PIN">
+                  <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <label style="display:flex;align-items:center;gap:6px;margin-left:8px;" title="Show PIN">
+                  <input type="checkbox" id="show-pin-check" /> Show
+                </label>
+              </div>
+            </div>
+
+            <button class="auth-btn" type="submit">{{ t('login') }}</button>
+          </form>
+          <div class="auth-divider">
+            <a class="auth-link" href="{{ url_for('forgot_password') }}">{{ t('forgot_password') }}</a>
+          </div>
+          <div class="auth-footer">
+            <span class="auth-muted">{{ t('no_account') }}</span>
+            <a class="auth-link" href="{{ url_for('register') }}">{{ t('register') }}</a>
+          </div>
+        </div>
+      </div>
+      <div class="auth-side auth-side-scene">
+        <div class="auth-scene">
+          <div class="auth-scene-forest">
+            <div class="auth-tree">
+              <div class="auth-tree-crown"></div>
+              <div class="auth-tree-trunk"></div>
+            </div>
+            <div class="leaf-layer">
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+              <div class="leaf"></div>
+            </div>
+            <div class="auth-scene-ground"></div>
+            <div class="cat-wrap">
+              <div class="cat" id="login-cat">
+                <div class="cat-body"></div>
+                <div class="cat-face">
+                  <div class="cat-ear left"><div class="cat-inner-ear"></div></div>
+                  <div class="cat-ear right"><div class="cat-inner-ear"></div></div>
+                  <div class="cat-eye left">
+                    <div class="cat-pupil"></div>
+                    <div class="cat-eye-lid"></div>
+                  </div>
+                  <div class="cat-eye right">
+                    <div class="cat-pupil"></div>
+                    <div class="cat-eye-lid"></div>
+                  </div>
+                  <div class="cat-nose"></div>
+                  <div class="cat-mouth"></div>
+                </div>
+                <div class="cat-tail"></div>
+                <div class="cat-grass"></div>
+              </div>
+            </div>
+            <div class="farmer-wrap">
+              <div class="farmer" id="login-farmer">
+                <div class="farmer-body"></div>
+                <div class="farmer-head">
+                  <div class="farmer-hat"></div>
+                  <div class="farmer-eye left">
+                    <div class="farmer-pupil"></div>
+                    <div class="farmer-eye-lid"></div>
+                  </div>
+                  <div class="farmer-eye right">
+                    <div class="farmer-pupil"></div>
+                    <div class="farmer-eye-lid"></div>
+                  </div>
+                  <div class="farmer-mouth"></div>
+                </div>
+                <div class="farmer-arm">
+                  <div class="farmer-hand"></div>
+                  <div class="farmer-lens">
+                    <div class="farmer-lens-handle"></div>
+                  </div>
+                </div>
+                <div class="farmer-grass"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const loader = document.getElementById('emoji-loader');
+      if (loader) {
+        loader.classList.add('show');
+        setTimeout(() => loader.classList.remove('show'), 1000);
+      }
+
+      // Scene blink helpers
+      const cat = document.getElementById('login-cat');
+      const farmer = document.getElementById('login-farmer');
+      function setBlink(on) {
+        if (cat) cat.classList.toggle('cat-blink', on);
+        if (farmer) farmer.classList.toggle('farmer-blink', on);
+      }
+
+      // Toggle password visibility using inline SVGs
+      function eyeSVG(open) {
+        if (open) return '<svg class="eye-icon eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        return '<svg class="eye-icon eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.94 17.94C16.05 19.16 14.07 20 12 20c-5.27 0-9.64-3.11-11-7 1.04-2.35 2.79-4.3 4.86-5.58M6.34 6.34C7.95 5.16 9.93 4.32 12 4.32c5.27 0 9.64 3.11 11 7-1.04 2.35-2.79 4.3-4.86 5.58" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      const togglePasswordBtn = document.getElementById('toggle-password');
+      const passwordInput = document.getElementById('password');
+      if (togglePasswordBtn && passwordInput) {
+        togglePasswordBtn.addEventListener('click', function () {
+          const t = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          passwordInput.setAttribute('type', t);
+          togglePasswordBtn.innerHTML = eyeSVG(t === 'text');
+          setBlink(t === 'text');
+        });
+      }
+
+      // Toggle PIN visibility (button)
+      const togglePinBtn = document.getElementById('toggle-pin');
+      const pinInput = document.getElementById('pin');
+      if (togglePinBtn && pinInput) {
+        togglePinBtn.addEventListener('click', function () {
+          const t = pinInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          pinInput.setAttribute('type', t);
+          togglePinBtn.innerHTML = eyeSVG(t === 'text');
+          setBlink(t === 'text');
+        });
+      }
+      // Show checkbox for PIN
+      const showPinCheck = document.getElementById('show-pin-check');
+      if (showPinCheck && pinInput) {
+        showPinCheck.addEventListener('change', function () { pinInput.setAttribute('type', this.checked ? 'text' : 'password'); });
+      }
+
+      // Switch between password and PIN depending on identifier
+      const identifier = document.getElementById('identifier');
+      const passwordRow = document.getElementById('password-row');
+      const pinRow = document.getElementById('pin-row');
+
+      function updateAuthFields() {
+        const v = (identifier.value || '').trim();
+        if (/^[0-9]+$/.test(v)) {
+          // numeric => likely phone => show PIN
+          passwordRow.style.display = 'none';
+          pinRow.style.display = 'block';
+        } else {
+          passwordRow.style.display = 'block';
+          pinRow.style.display = 'none';
+        }
+      }
+
+      if (identifier) {
+        identifier.addEventListener('input', updateAuthFields);
+        updateAuthFields();
+      }
+
+      // Toasts: animate and auto-dismiss
+      const toasts = document.querySelectorAll('.toast');
+      toasts.forEach((t, i) => {
+        setTimeout(() => t.classList.add('show'), 50 + i * 200);
+        setTimeout(() => t.classList.remove('show'), 5000 + i * 200);
+      });
+
+    });
+  </script>
+</body>
+</html>
+
+

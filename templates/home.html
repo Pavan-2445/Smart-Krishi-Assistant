@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home | Smart Krishi Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="home-bg">
+    <div id="emoji-loader" class="emoji-loader">
+        <div class="emoji-loader-orbit">
+            <span>🌾</span>
+            <span>☁️</span>
+            <span>🌱</span>
+            <span>🌦️</span>
+            <div class="emoji-loader-center">🚜</div>
+        </div>
+    </div>
+    <div class="lang-switch">
+        <a class="lang-pill {% if current_lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang_code='en', next=request.full_path) }}">EN</a>
+        <a class="lang-pill {% if current_lang == 'hi' %}active{% endif %}" href="{{ url_for('set_language', lang_code='hi', next=request.full_path) }}">HI</a>
+        <a class="lang-pill {% if current_lang == 'te' %}active{% endif %}" href="{{ url_for('set_language', lang_code='te', next=request.full_path) }}">TE</a>
+        {% if current_user %}
+        <a class="lang-pill" href="{{ url_for('logout') }}">{{ t('logout') }}</a>
+        {% endif %}
+    </div>
+    <div class="container d-flex flex-column align-items-center justify-content-center min-vh-100">
+        <h1 class="typewriter mb-5">{{ t('home_heading') }}</h1>
+        <div class="row justify-content-center g-4">
+            <div class="col-md-4">
+                <a href="/crop" class="card-link">
+                    <div class="home-card shine-hover">
+                        <h2>{{ t('home_crop_title') }}</h2>
+                        <p>{{ t('home_crop_sub') }}</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="/weather" class="card-link">
+                    <div class="home-card shine-hover">
+                        <h2>{{ t('home_weather_title') }}</h2>
+                        <p>{{ t('home_weather_sub') }}</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="/disease" class="card-link">
+                    <div class="home-card shine-hover">
+                        <h2>{{ t('home_disease_title') }}</h2>
+                        <p>{{ t('home_disease_sub') }}</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const loader = document.getElementById('emoji-loader');
+            if (!loader) return;
+            loader.classList.add('show');
+            setTimeout(() => loader.classList.remove('show'), 1000);
+        });
+    </script>
+</body>
+</html>
