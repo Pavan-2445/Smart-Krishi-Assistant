@@ -545,81 +545,44 @@ def update_password(email: str, password: str):
     cur.close()
     db.close()
 
-
-def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
-    """
-    Send OTP to user's email using SMTP.
-    Returns True on success, False on failure.
-    """
-
-    host = os.getenv("SMTP_HOST")
-    port = int(os.getenv("SMTP_PORT", "587"))
-    username = os.getenv("SMTP_USER")
-    password = os.getenv("SMTP_PASSWORD")
-    from_email = os.getenv("SMTP_FROM", username)
-
-    print(f"[DEBUG] SMTP config → host={host}, port={port}, user={username}, from={from_email}")
-
-    if not host or not username or not password:
-        print(f"[ERROR] SMTP not configured properly. OTP={otp} purpose={purpose}")
+def send_otp_email(to_email, otp_code, purpose="verify"):
+    if os.getenv("EMAIL_PROVIDER") != "brevo":
         return False
 
-    subject_map = {
-        "verify": "Your Smart Krishi verification code",
-        "login": "Your Smart Krishi login code",
-        "reset": "Your Smart Krishi password reset code",
+    api_key = os.getenv("BREVO_API_KEY")
+    from_name = os.getenv("EMAIL_FROM_NAME")
+    from_email = os.getenv("EMAIL_FROM_ADDRESS")
+
+    subject = "Smart Krishi Assistant - OTP Verification"
+    content = f"""
+    <p>Your OTP code is:</p>
+    <h2>{otp_code}</h2>
+    <p>This code is valid for 10 minutes.</p>
+    """
+
+    payload = {
+        "sender": {"name": from_name, "email": from_email},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": content
     }
-    subject = subject_map.get(purpose, "Your Smart Krishi OTP")
 
-    body = f"""
-Namaste 🙏,
-
-Your One-Time Password (OTP) for Smart Krishi Assistant is:
-
-🔐 OTP: {otp}
-
-Purpose: {purpose}
-⏳ Valid for 10 minutes
-
-If you did not request this, please ignore this email.
-
-– Smart Krishi Assistant
-"""
-
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = to_email
-    msg.set_content(body)
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "api-key": api_key
+    }
 
     try:
-        print("[DEBUG] Connecting to SMTP server...")
-        server = smtplib.SMTP(host, port, timeout=20)
-        server.set_debuglevel(1)   # 🔥 THIS LINE IS CRITICAL
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        print("[DEBUG] Logging into SMTP...")
-        server.login(username, password)
-        print("[DEBUG] Sending OTP email...")
-        server.send_message(msg)
-        server.quit()
-        print(f"[INFO] OTP email SENT to {to_email} for purpose={purpose}")
-        return True
-
-    except smtplib.SMTPAuthenticationError as e:
-        print("[ERROR] SMTP AUTHENTICATION FAILED")
-        print(e)
-        return False
-
-    except smtplib.SMTPException as e:
-        print("[ERROR] SMTP ERROR")
-        print(e)
-        return False
-
+        res = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers=headers,
+            timeout=10
+        )
+        return res.status_code in (200, 201)
     except Exception as e:
-        print("[ERROR] UNKNOWN EMAIL ERROR")
-        print(e)
+        print("[EMAIL ERROR]", e)
         return False
 
 
