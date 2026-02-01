@@ -545,45 +545,45 @@ def update_password(email: str, password: str):
     cur.close()
     db.close()
 
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+
 def send_otp_email(to_email, otp_code, purpose="verify"):
-    if os.getenv("EMAIL_PROVIDER") != "brevo":
-        return False
-
-    api_key = os.getenv("BREVO_API_KEY")
-    from_name = os.getenv("EMAIL_FROM_NAME")
-    from_email = os.getenv("EMAIL_FROM_ADDRESS")
-
-    subject = "Smart Krishi Assistant - OTP Verification"
-    content = f"""
-    <p>Your OTP code is:</p>
-    <h2>{otp_code}</h2>
-    <p>This code is valid for 10 minutes.</p>
-    """
-
-    payload = {
-        "sender": {"name": from_name, "email": from_email},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": content
-    }
-
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "api-key": api_key
-    }
-
     try:
-        res = requests.post(
-            "https://api.brevo.com/v3/smtp/email",
-            json=payload,
-            headers=headers,
-            timeout=10
-        )
-        return res.status_code in (200, 201)
+        smtp_host = os.getenv("SMTP_HOST")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        from_email = os.getenv("SMTP_FROM")
+
+        subject = "Smart Krishi Assistant - OTP Verification"
+
+        html_content = f"""
+        <p>Your OTP code is:</p>
+        <h2>{otp_code}</h2>
+        <p>This code is valid for 10 minutes.</p>
+        """
+
+        msg = MIMEMultipart()
+        msg["From"] = from_email
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_content, "html"))
+
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(from_email, to_email, msg.as_string())
+        server.quit()
+
+        print("[EMAIL] OTP sent successfully")
+        return True
+
     except Exception as e:
         print("[EMAIL ERROR]", e)
         return False
+
 
 
 
