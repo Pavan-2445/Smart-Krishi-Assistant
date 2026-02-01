@@ -549,12 +549,16 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-def send_otp_email(to_email, otp_code):
+def send_otp_email(to_email, otp_code, purpose="verify"):
     try:
         msg = MIMEMultipart()
         msg["From"] = os.getenv("SMTP_FROM")
         msg["To"] = to_email
-        msg["Subject"] = "Smart Krishi Assistant - OTP Verification"
+
+        if purpose == "reset":
+            msg["Subject"] = "Smart Krishi Assistant - Password Reset OTP"
+        else:
+            msg["Subject"] = "Smart Krishi Assistant - OTP Verification"
 
         body = f"""
         <p>Your OTP code is:</p>
