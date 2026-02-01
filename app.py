@@ -549,40 +549,38 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-def send_otp_email(to_email, otp_code, purpose="verify"):
+def send_otp_email(to_email, otp_code):
     try:
-        smtp_host = os.getenv("SMTP_HOST")
-        smtp_port = int(os.getenv("SMTP_PORT", 587))
-        smtp_user = os.getenv("SMTP_USER")
-        smtp_password = os.getenv("SMTP_PASSWORD")
-        from_email = os.getenv("SMTP_FROM")
+        msg = MIMEMultipart()
+        msg["From"] = os.getenv("SMTP_FROM")
+        msg["To"] = to_email
+        msg["Subject"] = "Smart Krishi Assistant - OTP Verification"
 
-        subject = "Smart Krishi Assistant - OTP Verification"
-
-        html_content = f"""
+        body = f"""
         <p>Your OTP code is:</p>
         <h2>{otp_code}</h2>
         <p>This code is valid for 10 minutes.</p>
         """
+        msg.attach(MIMEText(body, "html"))
 
-        msg = MIMEMultipart()
-        msg["From"] = from_email
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(html_content, "html"))
-
-        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+        server = smtplib.SMTP(
+            os.getenv("SMTP_HOST"),
+            int(os.getenv("SMTP_PORT")),
+            timeout=20
+        )
         server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.sendmail(from_email, to_email, msg.as_string())
+        server.login(
+            os.getenv("SMTP_USER"),
+            os.getenv("SMTP_PASSWORD")
+        )
+        server.send_message(msg)
         server.quit()
 
-        print("[EMAIL] OTP sent successfully")
         return True
-
     except Exception as e:
-        print("[EMAIL ERROR]", e)
+        print("[SMTP ERROR]", e)
         return False
+
 
 
 
