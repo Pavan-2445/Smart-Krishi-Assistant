@@ -547,33 +547,44 @@ def update_password(email: str, password: str):
 
 
 def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
-    """Send OTP to user's email using basic SMTP settings from environment.
+    """
+    Send OTP to user's email using SMTP.
     Returns True on success, False on failure.
     """
+
     host = os.getenv("SMTP_HOST")
     port = int(os.getenv("SMTP_PORT", "587"))
     username = os.getenv("SMTP_USER")
     password = os.getenv("SMTP_PASSWORD")
-    from_email = os.getenv("SMTP_FROM", username or "no-reply@example.com")
+    from_email = os.getenv("SMTP_FROM", username)
+
+    print(f"[DEBUG] SMTP config → host={host}, port={port}, user={username}, from={from_email}")
 
     if not host or not username or not password:
-        # SMTP not configured; log and return False
-        print(f"[WARN] SMTP not configured. OTP for {to_email} ({purpose}): {otp}")
+        print(f"[ERROR] SMTP not configured properly. OTP={otp} purpose={purpose}")
         return False
 
     subject_map = {
         "verify": "Your Smart Krishi verification code",
+        "login": "Your Smart Krishi login code",
         "reset": "Your Smart Krishi password reset code",
     }
     subject = subject_map.get(purpose, "Your Smart Krishi OTP")
 
-    body = (
-        f"Namaste,\n\n"
-        f"Your one-time password (OTP) for Smart Krishi ({purpose}) is: {otp}\n\n"
-        f"This code will expire in 10 minutes.\n\n"
-        f"If you did not request this, you can safely ignore this email.\n\n"
-        f"– Smart Krishi Assistant"
-    )
+    body = f"""
+Namaste 🙏,
+
+Your One-Time Password (OTP) for Smart Krishi Assistant is:
+
+🔐 OTP: {otp}
+
+Purpose: {purpose}
+⏳ Valid for 10 minutes
+
+If you did not request this, please ignore this email.
+
+– Smart Krishi Assistant
+"""
 
     msg = EmailMessage()
     msg["Subject"] = subject
@@ -582,18 +593,35 @@ def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
     msg.set_content(body)
 
     try:
-        with smtplib.SMTP(host, port) as server:
-            server.starttls()
-            server.login(username, password)
-            server.send_message(msg)
-        print(f"[INFO] Sent OTP email to {to_email} for {purpose}")
+        print("[DEBUG] Connecting to SMTP server...")
+        server = smtplib.SMTP(host, port, timeout=20)
+        server.set_debuglevel(1)   # 🔥 THIS LINE IS CRITICAL
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        print("[DEBUG] Logging into SMTP...")
+        server.login(username, password)
+        print("[DEBUG] Sending OTP email...")
+        server.send_message(msg)
+        server.quit()
+        print(f"[INFO] OTP email SENT to {to_email} for purpose={purpose}")
         return True
+
     except smtplib.SMTPAuthenticationError as e:
-        print(f"[ERROR] SMTP auth failed for {to_email}: {e}")
+        print("[ERROR] SMTP AUTHENTICATION FAILED")
+        print(e)
         return False
+
+    except smtplib.SMTPException as e:
+        print("[ERROR] SMTP ERROR")
+        print(e)
+        return False
+
     except Exception as e:
-        print(f"[ERROR] Failed to send OTP email to {to_email}: {e}")
+        print("[ERROR] UNKNOWN EMAIL ERROR")
+        print(e)
         return False
+
 
 
 def get_current_user():
