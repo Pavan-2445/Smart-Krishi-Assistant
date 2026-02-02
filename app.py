@@ -24,13 +24,44 @@ app = Flask(__name__)
 load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
+# Validate Brevo API key early to surface auth errors quickly (non-fatal). This avoids repeatedly
+# attempting sends with an obviously invalid/placeholder key and logs a clear message at startup.
+def validate_brevo_key():
+    key = (os.getenv("BREVO_API_KEY") or "").strip()
+    if not key or key.startswith("<"):
+        print("[WARN] BREVO API key is not set or appears to be a placeholder; Brevo email disabled.")
+        return False
+    try:
+        resp = requests.get("https://api.brevo.com/v3/account", headers={"api-key": key}, timeout=6)
+        if resp.status_code == 200:
+            print("[INFO] Brevo API key validated successfully")
+            return True
+        else:
+            print(f"[ERROR] Brevo API key validation failed (status={resp.status_code}) response={resp.text}")
+            return False
+    except Exception as e:
+        print(f"[ERROR] Exception during Brevo key validation: {e}")
+        return False
+
+# Run validation at startup (best-effort)
+validate_brevo_key()
+
 # --- MySQL configuration for auth ---
+# Parse MYSQL port safely: environment might be missing or empty.
+_mysql_port_env = os.getenv("MYSQL_PORT")
+try:
+    MYSQL_PORT = int(_mysql_port_env) if _mysql_port_env and _mysql_port_env.strip() != "" else 3306
+except ValueError:
+    print(f"[WARN] Invalid MYSQL_PORT '{_mysql_port_env}', falling back to 3306")
+    MYSQL_PORT = 3306
+
 DB_CONFIG = {
     "host": os.getenv("MYSQL_HOST"),
     "user": os.getenv("MYSQL_USER"),
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
-    "port": int(os.getenv("MYSQL_PORT", "3306")),
+    "port": MYSQL_PORT,
+    "ssl_disabled": True if os.getenv("MYSQL_SSL_DISABLED", "0") == "1" else False,
 }
 
 SUPPORTED_LANGS = {
@@ -545,48 +576,89 @@ def update_password(email: str, password: str):
     cur.close()
     db.close()
 
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
+def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
 
-def send_otp_email(to_email, otp_code, purpose="verify"):
-    try:
-        msg = MIMEMultipart()
-        msg["From"] = os.getenv("SMTP_FROM")
+    # Common data
+    subject_map = {
+        "verify": "Your Smart Krishi verification code",
+        "reset": "Your Smart Krishi password reset code",
+    }
+    subject = subject_map.get(purpose, "Your Smart Krishi OTP")
+
+    text_body = (
+        f"Namaste,\n\n"
+        f"Your one-time password (OTP) for Smart Krishi ({purpose}) is: {otp}\n\n"
+        f"This code will expire in 10 minutes.\n\n"
+        f"If you did not request this, you can safely ignore this email.\n\n"
+        f"– Smart Krishi Assistant"
+    )
+
+    html_body = (
+        f"<html><body>"
+        f"<p>Namaste,</p>"
+        f"<p>Your one-time password (OTP) for <strong>Smart Krishi</strong> ({purpose}) is: <b>{otp}</b></p>"
+        f"<p>This code will expire in 10 minutes.</p>"
+        f"<p>If you did not request this, you can safely ignore this email.</p>"
+        f"<p>– Smart Krishi Assistant</p>"
+        f"</body></html>"
+    )
+
+    # Try Brevo first if API key is provided (Render-friendly). Ignore placeholder/whitespace keys.
+    brevo_key = (os.getenv("BREVO_API_KEY") or "").strip()
+    if brevo_key and not brevo_key.startswith("<"):
+        brevo_url = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
+        from_email = os.getenv("BREVO_FROM_EMAIL", os.getenv("SMTP_FROM", "no-reply@example.com"))
+        sender_name = os.getenv("BREVO_SENDER_NAME", "Smart Krishi Assistant")
+        payload = {
+            "sender": {"email": from_email, "name": sender_name},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_body,
+            "textContent": text_body
+        }
+        headers = {"api-key": brevo_key, "Content-Type": "application/json"}
+        try:
+            resp = requests.post(brevo_url, json=payload, headers=headers, timeout=10)
+            if 200 <= resp.status_code < 300:
+                print(f"[INFO] Sent OTP via Brevo to {to_email} for {purpose} (status={resp.status_code})")
+                return True
+            else:
+                print(f"[ERROR] Brevo send failed (status={resp.status_code}) response={resp.text}")
+                # fall through to try SMTP as a fallback
+        except Exception as e:
+            print(f"[ERROR] Exception when sending via Brevo to {to_email}: {e}")
+    # Fallback to SMTP if configured
+    host = os.getenv("SMTP_HOST")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    username = os.getenv("SMTP_USER")
+    password = os.getenv("SMTP_PASSWORD")
+    from_email = os.getenv("SMTP_FROM", username or "no-reply@example.com")
+
+    if host and username and password:
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = from_email
         msg["To"] = to_email
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+        try:
+            with smtplib.SMTP(host, port) as server:
+                server.starttls()
+                server.login(username, password)
+                server.send_message(msg)
+            print(f"[INFO] Sent OTP email to {to_email} for {purpose} via SMTP")
+            return True
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"[ERROR] SMTP auth failed for {to_email}: {e}")
+            return False
+        except Exception as e:
+            print(f"[ERROR] Failed to send OTP email to {to_email} via SMTP: {e}")
+            return False
 
-        if purpose == "reset":
-            msg["Subject"] = "Smart Krishi Assistant - Password Reset OTP"
-        else:
-            msg["Subject"] = "Smart Krishi Assistant - OTP Verification"
-
-        body = f"""
-        <p>Your OTP code is:</p>
-        <h2>{otp_code}</h2>
-        <p>This code is valid for 10 minutes.</p>
-        """
-        msg.attach(MIMEText(body, "html"))
-
-        server = smtplib.SMTP(
-            os.getenv("SMTP_HOST"),
-            int(os.getenv("SMTP_PORT")),
-            timeout=20
-        )
-        server.starttls()
-        server.login(
-            os.getenv("SMTP_USER"),
-            os.getenv("SMTP_PASSWORD")
-        )
-        server.send_message(msg)
-        server.quit()
-
-        return True
-    except Exception as e:
-        print("[SMTP ERROR]", e)
-        return False
-
-
-
+    # Nothing configured; log and optionally show demo OTP
+    print(f"[WARN] No email provider configured. OTP for {to_email} ({purpose}): {otp}")
+    return False
 
 
 def get_current_user():
