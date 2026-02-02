@@ -1,10 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, jsonify
 import os
 from PIL import Image
-import torch
 import io
-from transformers import AutoImageProcessor, AutoModelForImageClassification
-from torchvision import transforms
+# Heavy ML libraries are imported lazily inside model loaders to avoid loading them during auth routes or app startup.
+# Transformers/torch/torchvision will be imported inside `get_disease_model()` when the disease route is used.
 import joblib
 import requests
 import re
@@ -578,7 +577,14 @@ def update_password(email: str, password: str):
 
 
 def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
+    """Send OTP to user's email.
 
+    Behavior:
+    - If `BREVO_API_KEY` is set, send via Brevo (Sendinblue) REST API (preferred on Render where SMTP may be blocked).
+    - Otherwise fall back to SMTP when SMTP env vars are configured.
+
+    Returns True on success, False on failure.
+    """
     # Common data
     subject_map = {
         "verify": "Your Smart Krishi verification code",
@@ -710,15 +716,37 @@ def enforce_language_choice():
     next_url = request.full_path if request.query_string else request.path
     return redirect(url_for("language", next=next_url))
 
-# --- Load Models ---
-# Crop Recommendation Model
-crop_model = joblib.load("crop_model.pkl")
-crop_label_encoder = joblib.load("crop_label_encoder (1).pkl")
+# --- Lazy model loaders (load on first use, not at import) ---
+# Crop Recommendation Model (lazy)
+crop_model = None
+crop_label_encoder = None
 
-# Disease Detection Model (HuggingFace)
+def get_crop_model():
+    """Load and cache crop recommendation model and label encoder."""
+    global crop_model, crop_label_encoder
+    if crop_model is None or crop_label_encoder is None:
+        import joblib
+        print("[INFO] Loading crop model and label encoder (lazy)")
+        crop_model = joblib.load("crop_model.pkl")
+        crop_label_encoder = joblib.load("crop_label_encoder (1).pkl")
+    return crop_model, crop_label_encoder
+
+# Disease Detection Model (HuggingFace) - load lazily when /disease is used
 DISEASE_MODEL_NAME = "wambugu71/crop_leaf_diseases_vit"
-disease_extractor = AutoImageProcessor.from_pretrained(DISEASE_MODEL_NAME)
-disease_model = AutoModelForImageClassification.from_pretrained(DISEASE_MODEL_NAME)
+disease_extractor = None
+disease_model = None
+
+def get_disease_model():
+    """Load and cache Hugging Face image processor + model."""
+    global disease_extractor, disease_model
+    if disease_extractor is None or disease_model is None:
+        # Import heavy deps locally to avoid importing them at module import time
+        from transformers import AutoImageProcessor, AutoModelForImageClassification
+        import torch
+        print(f"[INFO] Loading disease model {DISEASE_MODEL_NAME} (this may take a while)")
+        disease_extractor = AutoImageProcessor.from_pretrained(DISEASE_MODEL_NAME)
+        disease_model = AutoModelForImageClassification.from_pretrained(DISEASE_MODEL_NAME)
+    return disease_extractor, disease_model
 
 # --- Helper Functions ---
 def get_weather_emoji(condition):
@@ -1246,8 +1274,9 @@ def crop():
     if request.method == 'POST':
         try:
             data = [float(request.form.get(key)) for key in ['N', 'P', 'K', 'temperature', 'humidity', 'ph', 'rainfall']]
-            prediction = crop_model.predict([data])[0]
-            result = crop_label_encoder.inverse_transform([prediction])[0]
+            crop_m, crop_le = get_crop_model()
+            prediction = crop_m.predict([data])[0]
+            result = crop_le.inverse_transform([prediction])[0]
         except Exception:
             result = "Something went wrong. Please check your input."
     return render_template('crop.html', result=result)
@@ -1271,13 +1300,15 @@ def disease():
             if image_file:
                 img_bytes = image_file.read()
                 image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                # Hugging Face preprocessing
-                inputs = disease_extractor(images=image, return_tensors="pt")
+                # Lazy-load disease model & preprocessing
+                disease_extractor_local, disease_model_local = get_disease_model()
+                inputs = disease_extractor_local(images=image, return_tensors="pt")
+                import torch
                 with torch.no_grad():
-                    outputs = disease_model(**inputs)
+                    outputs = disease_model_local(**inputs)
                     logits = outputs.logits
                     predicted_class = logits.argmax(-1).item()
-                    result = disease_model.config.id2label[predicted_class]
+                    result = disease_model_local.config.id2label[predicted_class]
             else:
                 result = "No image uploaded."
         except Exception as e:
@@ -1288,3 +1319,4 @@ if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
