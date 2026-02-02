@@ -15,6 +15,8 @@ import random
 from typing import Optional
 import mysql.connector
 import smtplib
+import threading
+import time
 from email.message import EmailMessage
 
 
@@ -735,18 +737,64 @@ def get_crop_model():
 DISEASE_MODEL_NAME = "wambugu71/crop_leaf_diseases_vit"
 disease_extractor = None
 disease_model = None
+# Loading state/guards to prevent blocking the request and to avoid busy retries
+disease_loading = False
+disease_failed = False
+disease_failed_at = None
+DISEASE_LOAD_BACKOFF = 300  # seconds to wait after a failure
 
-def get_disease_model():
-    """Load and cache Hugging Face image processor + model."""
-    global disease_extractor, disease_model
-    if disease_extractor is None or disease_model is None:
-        # Import heavy deps locally to avoid importing them at module import time
+
+def _load_disease_model():
+    """Internal: perform the heavy imports and model loading in a background thread."""
+    global disease_extractor, disease_model, disease_loading, disease_failed, disease_failed_at
+    try:
         from transformers import AutoImageProcessor, AutoModelForImageClassification
         import torch
-        print(f"[INFO] Loading disease model {DISEASE_MODEL_NAME} (this may take a while)")
+        print(f"[INFO] Background loading of disease model {DISEASE_MODEL_NAME} started")
         disease_extractor = AutoImageProcessor.from_pretrained(DISEASE_MODEL_NAME)
         disease_model = AutoModelForImageClassification.from_pretrained(DISEASE_MODEL_NAME)
-    return disease_extractor, disease_model
+        disease_failed = False
+        print(f"[INFO] Disease model {DISEASE_MODEL_NAME} loaded successfully")
+    except MemoryError as me:
+        print(f"[ERROR] Out of memory while loading disease model: {me}")
+        disease_failed = True
+        disease_failed_at = time.time()
+    except Exception as e:
+        print(f"[ERROR] Failed to load disease model: {e}")
+        disease_failed = True
+        disease_failed_at = time.time()
+    finally:
+        disease_loading = False
+
+
+def start_load_disease_model_background():
+    """Kick off background loader (idempotent)."""
+    global disease_loading
+    if disease_loading:
+        return
+    disease_loading = True
+    t = threading.Thread(target=_load_disease_model, daemon=True)
+    t.start()
+
+
+def get_disease_model():
+    """Return model if ready, otherwise raise a short-lived status error.
+
+    Raises RuntimeError("loading") if load in progress, RuntimeError("failed") if recent failure.
+    """
+    global disease_extractor, disease_model, disease_loading, disease_failed, disease_failed_at
+    # If model already loaded — return immediately
+    if disease_extractor is not None and disease_model is not None:
+        return disease_extractor, disease_model
+
+    # If loading failed recently, respect backoff and do not retry immediately
+    if disease_failed and disease_failed_at and (time.time() - disease_failed_at) < DISEASE_LOAD_BACKOFF:
+        raise RuntimeError("failed")
+
+    # Start background load if not already started and tell caller to try later
+    if not disease_loading:
+        start_load_disease_model_background()
+    raise RuntimeError("loading")
 
 # --- Helper Functions ---
 def get_weather_emoji(condition):
@@ -1298,10 +1346,19 @@ def disease():
         try:
             image_file = request.files['leaf']
             if image_file:
+                # If model isn't ready, get_disease_model raises RuntimeError("loading") or RuntimeError("failed")
+                try:
+                    disease_extractor_local, disease_model_local = get_disease_model()
+                except RuntimeError as err:
+                    msg = str(err)
+                    if msg == 'loading':
+                        result = "⚠️ Model is warming up. Please try again in 30-60 seconds."
+                    else:
+                        result = "⚠️ Model is not available right now. Please try later."
+                    return render_template('disease.html', result=result)
+
                 img_bytes = image_file.read()
                 image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                # Lazy-load disease model & preprocessing
-                disease_extractor_local, disease_model_local = get_disease_model()
                 inputs = disease_extractor_local(images=image, return_tensors="pt")
                 import torch
                 with torch.no_grad():
@@ -1315,8 +1372,23 @@ def disease():
             result = f"⚠️ Error: {e}"
     return render_template('disease.html', result=result)
 
+
+@app.route('/warmup-disease', methods=['POST','GET'])
+def warmup_disease():
+    """Trigger background warming of disease model. Protected by WARMUP_KEY env var if set."""
+    key = request.args.get('key') or request.form.get('key')
+    env_key = os.getenv('WARMUP_KEY')
+    if env_key and key != env_key:
+        return ("Forbidden", 403)
+    # If a recent failure, communicate
+    global disease_failed, disease_failed_at
+    if disease_failed and disease_failed_at and (time.time() - disease_failed_at) < DISEASE_LOAD_BACKOFF:
+        return ("Model previously failed to load; wait before retrying", 503)
+    start_load_disease_model_background()
+    return ("Warming up disease model in background", 202)
+
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
