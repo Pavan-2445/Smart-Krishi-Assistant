@@ -23,7 +23,6 @@ app = Flask(__name__)
 
 load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
-
 def validate_brevo_key():
     key = (os.getenv("BREVO_API_KEY") or "").strip()
     if not key or key.startswith("<"):
@@ -49,7 +48,7 @@ DB_CONFIG = {
     "user": os.getenv("MYSQL_USER"),
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
-    "port": os.getenv("MYSQL_PORT"),
+    "port": int(os.getenv("MYSQL_PORT")),
     "ssl_disabled": True if os.getenv("MYSQL_SSL_DISABLED", "0") == "1" else False,
 }
 
