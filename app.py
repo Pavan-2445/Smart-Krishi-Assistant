@@ -248,7 +248,12 @@ def t(key: str) -> str:
 
 # Use a MySQL connection pool instead of creating a new connection on every call.
 # Pool size is read from MYSQL_POOL_SIZE and clamped to the requested 3-5 range.
-
+print(
+    "[DB DEBUG]",
+    DB_CONFIG["host"],
+    DB_CONFIG["port"],
+    os.path.exists(DB_CONFIG["ssl_ca"])
+)
 def get_db():
     return mysql.connector.connect(**DB_CONFIG)
 
