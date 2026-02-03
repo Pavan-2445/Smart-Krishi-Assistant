@@ -240,9 +240,10 @@ def get_db():
         password=DB_CONFIG["password"],
         database=DB_CONFIG["database"],
         port=DB_CONFIG["port"],
-        ssl={"ssl": {}},
+        ssl={"ca": None}
         cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False
+        autocommit=False,
+        connect_timeout=10
     )
 
 _auth_schema_ensured = False
