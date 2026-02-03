@@ -48,11 +48,6 @@ validate_brevo_key()
 # --- MySQL configuration for auth ---
 # Parse MYSQL port safely: environment might be missing or empty.
 _mysql_port_env = os.getenv("MYSQL_PORT")
-try:
-    MYSQL_PORT = int(_mysql_port_env) if _mysql_port_env and _mysql_port_env.strip() != "" else 3306
-except ValueError:
-    print(f"[WARN] Invalid MYSQL_PORT '{_mysql_port_env}', falling back to 3306")
-    MYSQL_PORT = 3306
 
 DB_CONFIG = {
     "host": os.getenv("MYSQL_HOST"),
@@ -60,8 +55,13 @@ DB_CONFIG = {
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
     "port": int(os.getenv("MYSQL_PORT")),
-    "ssl_ca": "ca.pem",
-    "connection_timeout": 10
+
+    # SSL (Aiven REQUIRED)
+    "ssl_ca": os.getenv("MYSQL_SSL_CA", "ca.pem"),
+    "ssl_verify_cert": True,
+    "ssl_verify_identity": True,
+
+    "connection_timeout": 10,
 }
 
 SUPPORTED_LANGS = {
