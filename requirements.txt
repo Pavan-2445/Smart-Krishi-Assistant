@@ -5,4 +5,4 @@ joblib
 requests
 gunicorn
 python-dotenv
-pymysql
+mysql.connector
