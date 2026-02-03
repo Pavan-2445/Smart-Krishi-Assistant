@@ -1,11 +1,8 @@
 flask
 pillow
-torch
-transformers
-scikit-learn==1.6.1
+scikit-learn
 joblib
-requests 
-torchvision
+requests
 gunicorn
 python-dotenv
 mysql-connector-python
