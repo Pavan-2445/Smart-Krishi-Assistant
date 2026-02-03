@@ -233,31 +233,17 @@ def t(key: str) -> str:
         lang = "en"
     return STRINGS[lang].get(key, STRINGS["en"].get(key, key))
 
-DB_POOL = None
-def init_db_pool():
-    global DB_POOL
-    try:
-        pool_size = int(os.getenv("MYSQL_POOL_SIZE", "5"))
-    except Exception:
-        pool_size = 5
-    pool_size = max(3, min(5, pool_size))
-    pool_name = os.getenv("MYSQL_POOL_NAME", "smartkrishi_pool")
-    try:
-        DB_POOL = pooling.MySQLConnectionPool(pool_name=pool_name, pool_size=pool_size, **DB_CONFIG)
-        print(f"[INFO] Initialized MySQL connection pool '{pool_name}' with size {pool_size}")
-    except Exception as e:
-        print(f"[WARN] Failed to initialize DB pool: {e}")
-        DB_POOL = None
-
-init_db_pool()
-
 def get_db():
-    if DB_POOL:
-        try:
-            return DB_POOL.get_connection()
-        except Exception as e:
-            print(f"[WARN] DB_POOL.get_connection failed ({e}); falling back to direct connection")
-    return mysql.connector.connect(**DB_CONFIG)
+    return pymysql.connect(
+        host=DB_CONFIG["host"],
+        user=DB_CONFIG["user"],
+        password=DB_CONFIG["password"],
+        database=DB_CONFIG["database"],
+        port=DB_CONFIG["port"],
+        ssl={"ssl": {}},
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
 
 _auth_schema_ensured = False
 def ensure_auth_schema():
@@ -278,7 +264,7 @@ def ensure_auth_schema():
                 cur.execute(f"ALTER TABLE user_details ADD COLUMN {col} {defn}")
                 db.commit()
                 print(f"[INFO] ensure_auth_schema: added column {col}")
-            except mysql.connector.Error as e:
+            except Exception as e:
                 if e.errno == 1060:
                     print(f"[DEBUG] ensure_auth_schema: column {col} already exists")
                 else:
@@ -287,21 +273,21 @@ def ensure_auth_schema():
             cur.execute("ALTER TABLE user_details MODIFY COLUMN otp_purpose VARCHAR(50) DEFAULT NULL")
             db.commit()
             print("[INFO] ensure_auth_schema: modified otp_purpose size")
-        except mysql.connector.Error as e:
+        except Exception as e:
             print(f"[WARN] could not modify otp_purpose: {e}")
 
         try:
             cur.execute("ALTER TABLE user_details MODIFY COLUMN password_hash VARCHAR(200) DEFAULT NULL")
             db.commit()
             print("[INFO] ensure_auth_schema: made password_hash nullable")
-        except mysql.connector.Error as e:
+        except Exception as e:
             print(f"[WARN] could not modify password_hash nullability: {e}")
 
         try:
             cur.execute("ALTER TABLE user_details ADD UNIQUE INDEX uq_user_phone (phone)")
             db.commit()
             print("[INFO] ensure_auth_schema: added unique index on phone")
-        except mysql.connector.Error as e:
+        except Exception as e:
             if e.errno in (1061, 1060):
                 print("[DEBUG] ensure_auth_schema: unique index on phone already exists")
             else:
@@ -325,13 +311,11 @@ def get_user_by_email(email: str):
 
 
 def get_user_by_identifier(identifier: str):
-    """Look up a user by email or phone (identifier can be email or phone)."""
     identifier = (identifier or "").strip()
     if not identifier:
         return None
     db = get_db()
     cur = db.cursor(dictionary=True)
-    # Try phone first if looks numeric
     if identifier.isdigit():
         cur.execute("SELECT * FROM user_details WHERE phone=%s", (identifier,))
         user = cur.fetchone()
@@ -347,8 +331,6 @@ def get_user_by_identifier(identifier: str):
 
 
 def create_user(name: str, email: str = None, password: str = None, age: str = "", occupation: str = "", pincode: str = "", location_data: str = "", phone: str = None, is_farmer: int = 0, farmer_pin: str = None):
-    """Create a user. For non-farmers, `email` should be provided. For farmers provide `phone` and `farmer_pin`.
-    If `password` is None for non-farmers, they will be created unverified and asked to verify via OTP before setting a password."""
     db = get_db()
     cur = db.cursor()
 
@@ -388,7 +370,7 @@ def create_user(name: str, email: str = None, password: str = None, age: str = "
             ),
         )
         db.commit()
-    except mysql.connector.Error as e:
+    except Exception as e:
         print(f"[ERROR] create_user insert failed: {e}")
         try:
             db.rollback()
@@ -450,7 +432,7 @@ def set_otp(email: str, purpose: str) -> Optional[str]:
         cur.close()
         db.close()
         return otp
-    except mysql.connector.Error as e:
+    except Exception as e:
         print(f"[ERROR] Failed to set OTP for {email}: {e}")
         try:
             if cur:
