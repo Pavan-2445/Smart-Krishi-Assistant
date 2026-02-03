@@ -42,19 +42,14 @@ def validate_brevo_key():
         return False
 
 validate_brevo_key()
-_mysql_port_env = os.getenv("MYSQL_PORT")
-try:
-    MYSQL_PORT = int(_mysql_port_env) if _mysql_port_env and _mysql_port_env.strip() != "" else 3306
-except ValueError:
-    print(f"[WARN] Invalid MYSQL_PORT '{_mysql_port_env}', falling back to 3306")
-    MYSQL_PORT = 3306
+
 
 DB_CONFIG = {
     "host": os.getenv("MYSQL_HOST"),
     "user": os.getenv("MYSQL_USER"),
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
-    "port": MYSQL_PORT,
+    "port": os.getenv("MYSQL_PORT"),
     "ssl_disabled": True if os.getenv("MYSQL_SSL_DISABLED", "0") == "1" else False,
 }
 
