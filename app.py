@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 import random
 from typing import Optional
-import mysql.connector
-from mysql.connector import pooling
+import pymysql
+from pymysql import connections
 import smtplib
 import threading
 import time
@@ -48,7 +48,7 @@ DB_CONFIG = {
     "user": os.getenv("MYSQL_USER"),
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
-    "port": int(os.getenv("MYSQL_PORT")),
+    "port": int(os.getenv("MYSQL_PORT", "22183")),
     "ssl_disabled": True if os.getenv("MYSQL_SSL_DISABLED", "0") == "1" else False,
 }
 
