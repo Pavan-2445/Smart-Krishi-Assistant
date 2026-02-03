@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import os
 from PIL import Image
 import io
-# Configure the external Disease API URL via the DISEASE_API_URL environment variable.
 import joblib
 import requests
 import re
