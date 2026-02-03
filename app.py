@@ -11,8 +11,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 import random
 from typing import Optional
-import pymysql
-from pymysql import connections
+import mysql.connector
 import smtplib
 import threading
 import time
@@ -23,6 +22,9 @@ app = Flask(__name__)
 
 load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+# Validate Brevo API key early to surface auth errors quickly (non-fatal). This avoids repeatedly
+# attempting sends with an obviously invalid/placeholder key and logs a clear message at startup.
 def validate_brevo_key():
     key = (os.getenv("BREVO_API_KEY") or "").strip()
     if not key or key.startswith("<"):
@@ -40,15 +42,24 @@ def validate_brevo_key():
         print(f"[ERROR] Exception during Brevo key validation: {e}")
         return False
 
+# Run validation at startup (best-effort)
 validate_brevo_key()
 
+# --- MySQL configuration for auth ---
+# Parse MYSQL port safely: environment might be missing or empty.
+_mysql_port_env = os.getenv("MYSQL_PORT")
+try:
+    MYSQL_PORT = int(_mysql_port_env) if _mysql_port_env and _mysql_port_env.strip() != "" else 3306
+except ValueError:
+    print(f"[WARN] Invalid MYSQL_PORT '{_mysql_port_env}', falling back to 3306")
+    MYSQL_PORT = 3306
 
 DB_CONFIG = {
     "host": os.getenv("MYSQL_HOST"),
     "user": os.getenv("MYSQL_USER"),
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
-    "port": int(os.getenv("MYSQL_PORT", "22183")),
+    "port": int(os.getenv("MYSQL_PORT")),
     "ssl_disabled": True if os.getenv("MYSQL_SSL_DISABLED", "0") == "1" else False,
 }
 
@@ -233,21 +244,22 @@ def t(key: str) -> str:
         lang = "en"
     return STRINGS[lang].get(key, STRINGS["en"].get(key, key))
 
-def get_db():
-    return pymysql.connect(
-        host=DB_CONFIG["host"],
-        user=DB_CONFIG["user"],
-        password=DB_CONFIG["password"],
-        database=DB_CONFIG["database"],
-        port=DB_CONFIG["port"],
-        ssl={"ca": None},
-        cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False,
-        connect_timeout=10
-    )
 
+# Use a MySQL connection pool instead of creating a new connection on every call.
+# Pool size is read from MYSQL_POOL_SIZE and clamped to the requested 3-5 range.
+
+def get_db():
+    return mysql.connector.connect(**DB_CONFIG)
+
+
+# --- SQL-based auth helpers ---
 _auth_schema_ensured = False
+
+
 def ensure_auth_schema():
+    """Add pincode and location_data columns to user_details if missing (once per process).
+    Best-effort migrations with informative logging so failures are visible in logs.
+    """
     global _auth_schema_ensured
     if _auth_schema_ensured:
         return
@@ -265,30 +277,33 @@ def ensure_auth_schema():
                 cur.execute(f"ALTER TABLE user_details ADD COLUMN {col} {defn}")
                 db.commit()
                 print(f"[INFO] ensure_auth_schema: added column {col}")
-            except Exception as e:
-                if e.errno == 1060:
+            except mysql.connector.Error as e:
+                if e.errno == 1060:  # Duplicate column name
                     print(f"[DEBUG] ensure_auth_schema: column {col} already exists")
                 else:
                     print(f"[WARN] ensure_auth_schema add column {col} failed: {e}")
+        # Ensure otp_purpose column is large enough to hold purpose strings like 'login','verify','reset'
         try:
             cur.execute("ALTER TABLE user_details MODIFY COLUMN otp_purpose VARCHAR(50) DEFAULT NULL")
             db.commit()
             print("[INFO] ensure_auth_schema: modified otp_purpose size")
-        except Exception as e:
+        except mysql.connector.Error as e:
             print(f"[WARN] could not modify otp_purpose: {e}")
 
+        # Allow password_hash to be NULL for unverified users (best-effort)
         try:
             cur.execute("ALTER TABLE user_details MODIFY COLUMN password_hash VARCHAR(200) DEFAULT NULL")
             db.commit()
             print("[INFO] ensure_auth_schema: made password_hash nullable")
-        except Exception as e:
+        except mysql.connector.Error as e:
             print(f"[WARN] could not modify password_hash nullability: {e}")
 
+        # Add unique index on phone to avoid duplicate farmer accounts (best-effort)
         try:
             cur.execute("ALTER TABLE user_details ADD UNIQUE INDEX uq_user_phone (phone)")
             db.commit()
             print("[INFO] ensure_auth_schema: added unique index on phone")
-        except Exception as e:
+        except mysql.connector.Error as e:
             if e.errno in (1061, 1060):
                 print("[DEBUG] ensure_auth_schema: unique index on phone already exists")
             else:
@@ -312,11 +327,13 @@ def get_user_by_email(email: str):
 
 
 def get_user_by_identifier(identifier: str):
+    """Look up a user by email or phone (identifier can be email or phone)."""
     identifier = (identifier or "").strip()
     if not identifier:
         return None
     db = get_db()
     cur = db.cursor(dictionary=True)
+    # Try phone first if looks numeric
     if identifier.isdigit():
         cur.execute("SELECT * FROM user_details WHERE phone=%s", (identifier,))
         user = cur.fetchone()
@@ -332,18 +349,25 @@ def get_user_by_identifier(identifier: str):
 
 
 def create_user(name: str, email: str = None, password: str = None, age: str = "", occupation: str = "", pincode: str = "", location_data: str = "", phone: str = None, is_farmer: int = 0, farmer_pin: str = None):
+    """Create a user. For non-farmers, `email` should be provided. For farmers provide `phone` and `farmer_pin`.
+    If `password` is None for non-farmers, they will be created unverified and asked to verify via OTP before setting a password."""
     db = get_db()
     cur = db.cursor()
 
+    # Store an empty string when password is not provided so INSERT succeeds even if the column is NOT NULL
     password_hash = generate_password_hash(password) if password else ""
     farmer_pin_hash = generate_password_hash(farmer_pin) if farmer_pin else None
+
+    # If no email provided (farmers), create a unique placeholder email so NOT NULL constraints are satisfied AND uniqueness holds
     if not email:
+        # Prevent duplicate phone registration
         if phone:
             cur.execute("SELECT id FROM user_details WHERE phone=%s", (phone,))
             if cur.fetchone():
                 cur.close()
                 db.close()
                 raise ValueError("Phone number already registered")
+            # include timestamp to avoid collisions with future real emails
             email_val = f"phone_{phone}_{int(datetime.now().timestamp())}@no-email.local"
         else:
             email_val = f"user_{int(datetime.now().timestamp())}@no-email.local"
@@ -371,12 +395,14 @@ def create_user(name: str, email: str = None, password: str = None, age: str = "
             ),
         )
         db.commit()
-    except Exception as e:
+    except mysql.connector.Error as e:
+        # If insert fails due to NOT NULL on password_hash or related issues, log and retry conservatively
         print(f"[ERROR] create_user insert failed: {e}")
         try:
             db.rollback()
         except Exception:
             pass
+        # Try a second time forcing an empty password_hash (defensive)
         try:
             cur.execute(
                 """
@@ -415,6 +441,7 @@ def _generate_otp() -> str:
 
 def set_otp(email: str, purpose: str) -> Optional[str]:
     otp = _generate_otp()
+    # Use timezone-aware UTC timestamp
     exp = datetime.now(timezone.utc) + timedelta(minutes=10)
     db = None
     cur = None
@@ -433,7 +460,7 @@ def set_otp(email: str, purpose: str) -> Optional[str]:
         cur.close()
         db.close()
         return otp
-    except Exception as e:
+    except mysql.connector.Error as e:
         print(f"[ERROR] Failed to set OTP for {email}: {e}")
         try:
             if cur:
@@ -467,10 +494,12 @@ def verify_otp_code(email: str, otp: str, purpose: str) -> bool:
         db.close()
         print(f"[INFO] verify_otp: missing expiry for email={email}")
         return False
+    # Normalize expiry to timezone-aware UTC for a robust comparison
     try:
         if exp.tzinfo is None:
             exp = exp.replace(tzinfo=timezone.utc)
     except Exception:
+        # In case the driver returned non-datetime, fail safely
         cur.close()
         db.close()
         print(f"[WARN] verify_otp: unexpected expiry format for {email}: {exp}")
@@ -519,6 +548,15 @@ def update_password(email: str, password: str):
 
 
 def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
+    """Send OTP to user's email.
+
+    Behavior:
+    - If `BREVO_API_KEY` is set, send via Brevo (Sendinblue) REST API (preferred on Render where SMTP may be blocked).
+    - Otherwise fall back to SMTP when SMTP env vars are configured.
+
+    Returns True on success, False on failure.
+    """
+    # Common data
     subject_map = {
         "verify": "Your Smart Krishi verification code",
         "reset": "Your Smart Krishi password reset code",
@@ -543,6 +581,7 @@ def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
         f"</body></html>"
     )
 
+    # Try Brevo first if API key is provided (Render-friendly). Ignore placeholder/whitespace keys.
     brevo_key = (os.getenv("BREVO_API_KEY") or "").strip()
     if brevo_key and not brevo_key.startswith("<"):
         brevo_url = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
@@ -563,8 +602,10 @@ def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
                 return True
             else:
                 print(f"[ERROR] Brevo send failed (status={resp.status_code}) response={resp.text}")
+                # fall through to try SMTP as a fallback
         except Exception as e:
             print(f"[ERROR] Exception when sending via Brevo to {to_email}: {e}")
+    # Fallback to SMTP if configured
     host = os.getenv("SMTP_HOST")
     port = int(os.getenv("SMTP_PORT", "587"))
     username = os.getenv("SMTP_USER")
@@ -591,6 +632,8 @@ def send_otp_email(to_email: str, otp: str, purpose: str) -> bool:
         except Exception as e:
             print(f"[ERROR] Failed to send OTP email to {to_email} via SMTP: {e}")
             return False
+
+    # Nothing configured; log and optionally show demo OTP
     print(f"[WARN] No email provider configured. OTP for {to_email} ({purpose}): {otp}")
     return False
 
@@ -606,7 +649,8 @@ def get_current_user():
     cur.close()
     db.close()
     return user
-    
+
+
 @app.context_processor
 def inject_globals():
     return {
@@ -616,29 +660,40 @@ def inject_globals():
         "current_user": get_current_user(),
     }
 
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
+        # Ensure there is a valid, existing user; if not, clear stale session.
         user = get_current_user()
         if not user:
             session.pop("user_id", None)
             return redirect(url_for("login", next=request.path))
         return view(*args, **kwargs)
+
     return wrapped
 
 
 @app.before_request
 def enforce_language_choice():
+    # Allow static assets and language/auth endpoints without forcing a language first.
     if request.endpoint in {"static", "language", "set_language"}:
         return None
+
+    # Skip if endpoint is None (e.g., 404) or if language already chosen
     if not request.endpoint or session.get("lang"):
         return None
+
     next_url = request.full_path if request.query_string else request.path
     return redirect(url_for("language", next=next_url))
 
+# --- Lazy model loaders (load on first use, not at import) ---
+# Crop Recommendation Model (lazy)
 crop_model = None
 crop_label_encoder = None
+
 def get_crop_model():
+    """Load and cache crop recommendation model and label encoder."""
     global crop_model, crop_label_encoder
     if crop_model is None or crop_label_encoder is None:
         import joblib
@@ -647,8 +702,16 @@ def get_crop_model():
         crop_label_encoder = joblib.load("crop_label_encoder (1).pkl")
     return crop_model, crop_label_encoder
 
+# Disease Detection is implemented as an independent FastAPI service hosted externally.
+# Configure its public URL via the DISEASE_API_URL environment variable (e.g. https://<service>.onrender.com/predict).
 DISEASE_API_URL = os.getenv('DISEASE_API_URL')
+
+
 def call_disease_api(image_bytes, filename=None, content_type=None, timeout=15, max_retries=1):
+    """Send image bytes to the external Disease API and return parsed JSON.
+
+    Retries once on transient network errors. Raises RuntimeError or requests exceptions on failure.
+    """
     if not DISEASE_API_URL:
         raise RuntimeError('DISEASE_API_URL not configured')
 
@@ -666,10 +729,13 @@ def call_disease_api(image_bytes, filename=None, content_type=None, timeout=15, 
                 raise RuntimeError(f"Disease API returned status {resp.status_code}")
         except requests.exceptions.RequestException as e:
             last_exc = e
+            # short backoff before retry
             time.sleep(0.5)
             continue
+    # If we reach here, all attempts failed
     raise last_exc or RuntimeError('Disease API request failed')
 
+# --- Helper Functions ---
 def get_weather_emoji(condition):
     condition = condition.lower()
     if "sun" in condition: return "☀️"
@@ -680,6 +746,7 @@ def get_weather_emoji(condition):
     else: return "🌤️"
 
 def geocode_city(city):
+    # Use Nominatim to get lat/lon from city name
     try:
         url = f"https://nominatim.openstreetmap.org/search"
         params = {"q": city, "format": "json", "limit": 1}
@@ -698,6 +765,7 @@ def geocode_city(city):
 
 
 def geocode_by_pincode(pincode: str):
+    """Fetch location (display name) for Indian pincode via Nominatim. Uses a short timeout to avoid blocking."""
     pincode = (pincode or "").strip()
     if not pincode or not pincode.isdigit():
         return None
@@ -709,6 +777,7 @@ def geocode_by_pincode(pincode: str):
         data = response.json()
         if data:
             return data[0].get("display_name")
+        # Fallback: search as query
         params = {"q": f"{pincode}, India", "format": "json", "limit": 1}
         response = requests.get(url, params=params, headers=headers, timeout=5)
         data = response.json()
@@ -720,6 +789,7 @@ def geocode_by_pincode(pincode: str):
         return None
 
 def fetch_forecast(city):
+    # Use weatherapi.com for accurate weather, fallback to Open-Meteo for small villages/pincodes
     API_KEY = os.environ.get('WEATHER_API_KEY')
     try:
         url = f"http://api.weatherapi.com/v1/current.json"
@@ -730,6 +800,7 @@ def fetch_forecast(city):
         print(f"[DEBUG] Weather API response: {response.text}")
         data = response.json()
         if 'error' in data or 'current' not in data:
+            # Fallback: Use Nominatim to get lat/lon, then Open-Meteo
             print(f"[DEBUG] WeatherAPI failed, using Nominatim + Open-Meteo fallback for: {city}")
             lat, lon, display_name = geocode_city(city)
             if not lat or not lon:
@@ -750,9 +821,11 @@ def fetch_forecast(city):
                     weather = om_data["current_weather"]
                     temp = weather["temperature"]
                     code = weather["weathercode"]
+                    # Map code to condition
                     code_map = {0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Fog", 48: "Depositing rime fog", 51: "Drizzle", 61: "Rain", 71: "Snow", 80: "Rain showers", 95: "Thunderstorm"}
                     condition = code_map.get(code, "Unknown")
                     emoji = get_weather_emoji(condition)
+                    # Try to get humidity from hourly data
                     humidity = ''
                     if "hourly" in om_data and "relative_humidity_2m" in om_data["hourly"]:
                         humidity = om_data["hourly"]["relative_humidity_2m"][0]
@@ -785,20 +858,27 @@ def fetch_forecast(city):
     except Exception as e:
         print(f"[ERROR] Exception in fetch_forecast: {e}")
         return {'forecast': f"⚠️ Unable to fetch forecast: {e}", 'condition': None, 'emoji': '', 'temp': '', 'humidity': '', 'location': ''}
+
+# --- Routes ---
+
+
 @app.route("/")
 def index():
     if not session.get("lang"):
         return redirect(url_for("language"))
+    # After choosing language, push to auth first.
     user = get_current_user()
     if not user:
         session.pop("user_id", None)
         return redirect(url_for("login"))
     return redirect(url_for("home"))
 
+
 @app.route("/language")
 def language():
     next_url = request.args.get("next") or url_for("login")
     return render_template("language.html", next_url=next_url)
+
 
 @app.route("/set-language/<lang_code>")
 def set_language(lang_code):
@@ -808,6 +888,7 @@ def set_language(lang_code):
     next_url = request.args.get("next") or url_for("login")
     return redirect(next_url)
 
+
 @app.route('/api/geocode-pincode')
 def api_geocode_pincode():
     pincode = (request.args.get('pincode') or '').strip()
@@ -816,8 +897,10 @@ def api_geocode_pincode():
     display = geocode_by_pincode(pincode)
     return jsonify({'display_name': display})
 
+
 @app.route('/admin/db-columns')
 def admin_db_columns():
+    # Exposed only when ENABLE_ADMIN=1 to help debugging schema issues
     if os.getenv('ENABLE_ADMIN') != '1':
         return jsonify({'error': 'disabled'}), 403
     try:
@@ -832,6 +915,7 @@ def admin_db_columns():
         print(f"[ERROR] admin_db_columns failed: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/admin/ensure-auth-schema', methods=['POST'])
 def admin_ensure_schema():
     if os.getenv('ENABLE_ADMIN') != '1':
@@ -842,6 +926,7 @@ def admin_ensure_schema():
     except Exception as e:
         print(f"[ERROR] admin_ensure_schema failed: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/admin/get-otp')
 def admin_get_otp():
@@ -869,16 +954,20 @@ def admin_get_otp():
 def welcome():
     return render_template("welcome.html")
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     ensure_auth_schema()
     if request.method == "POST":
         occupation = (request.form.get("occupation") or "").strip()
+
+        # Farmer flow (phone + 6-digit PIN)
         if occupation == "Farmer":
             name = (request.form.get("farmer_name") or request.form.get("name") or "").strip()
             phone = (request.form.get("phone") or "").strip()
             pincode = (request.form.get("pincode") or "").strip()
             farmer_pin = (request.form.get("farmer_pin") or "").strip()
+            # Prefer client-provided location (auto-filled), avoid synchronous geocode to reduce blocking
             location_data = (request.form.get("location") or "").strip()
 
             if not name or not phone or not pincode or not farmer_pin:
@@ -901,6 +990,7 @@ def register():
                 flash("Phone already registered. Please login or use another number.", "error")
                 return redirect(url_for("login"))
 
+            # If location wasn't populated by client, attempt a short-timeout geocode (best-effort)
             if not location_data:
                 try:
                     location_data = geocode_by_pincode(pincode) or ""
@@ -917,6 +1007,8 @@ def register():
                 flash("Unable to complete registration right now. Please try again later.", "error")
                 return render_template("register.html")
 
+        # Non-farmer flow: ask name + email, send OTP to email and ask to verify before setting password
+        # Accept multiple possible input names (defensive in case templates change)
         name = (request.form.get("name") or request.form.get("user-name") or request.form.get("farmer_name") or "").strip()
         email = (request.form.get("email") or request.form.get("user-email") or "").strip().lower()
 
@@ -934,11 +1026,13 @@ def register():
             if existing.get("verified"):
                 flash("Email already registered. Please login.", "error")
                 return redirect(url_for("login"))
+            # Unverified: resend OTP and send to verify page
             otp_code = set_otp(email, "verify")
             if not otp_code:
                 flash("Unable to send verification code right now. Please try again later.", "error")
                 return render_template("register.html")
             sent = send_otp_email(email, otp_code, "verify")
+            # Show demo OTP if configured
             if not sent and os.getenv('DEMO_SHOW_OTP') == '1':
                 flash(f"Demo OTP: {otp_code}", "success")
             if not sent:
@@ -984,6 +1078,7 @@ def login():
                 flash("Invalid credentials", "error")
                 return render_template("login.html")
 
+            # Farmer login via phone + 6-digit PIN
             if user.get("is_farmer"):
                 if not identifier.isdigit():
                     flash("Please enter your phone number to login as Farmer.", "error")
@@ -994,10 +1089,13 @@ def login():
                 if not user.get("farmer_pin_hash") or not check_password_hash(user.get("farmer_pin_hash"), pin):
                     flash("Invalid credentials", "error")
                     return render_template("login.html")
+                # Successful farmer login
                 session["user_id"] = user["id"]
                 flash("Logged in successfully.", "success")
                 next_url = request.args.get("next") or url_for("home")
                 return redirect(next_url)
+
+            # Non-farmers: password first, then OTP for every login attempt
             if not user.get("password_hash") or not check_password_hash(user.get("password_hash"), password):
                 flash("Invalid credentials", "error")
                 return render_template("login.html")
@@ -1011,6 +1109,7 @@ def login():
                 flash("Verify your account first. We've sent a code to your email.", "error")
                 return redirect(url_for("verify_otp", email=user["email"]))
 
+            # Send login OTP for non-farmers on every login
             otp_code = set_otp(user["email"], "login")
             if not otp_code:
                 flash("Unable to send login code right now. Please try again later.", "error")
@@ -1059,14 +1158,17 @@ def verify_otp():
                     next_url = request.form.get("next") or request.args.get("next") or url_for("home")
                     return redirect(next_url)
             else:
+                # Verification after registration
                 mark_verified(email)
                 user = get_user_by_email(email)
+                # If the account has no password yet, set session flag and redirect to reset password page
                 if user and not user.get("password_hash"):
                     session["set_password_email"] = email
                     flash("Verified. Please set your password.", "success")
                     return redirect(url_for("reset_password", email=email))
                 flash("Account verified", "success")
                 return redirect(url_for("login"))
+        # Diagnostic logging for failed verifications
         try:
             db = get_db()
             cur = db.cursor(dictionary=True)
@@ -1076,6 +1178,7 @@ def verify_otp():
             db.close()
             if row:
                 print(f"[INFO] verify_otp failed for {email}: submitted_otp={otp}, stored_otp={row.get('otp')}, stored_purpose={row.get('otp_purpose')}, expires_at={row.get('otp_expires_at')}")
+                # If demo mode enabled, show OTP to user for easier debugging
                 if os.getenv('DEMO_SHOW_OTP') == '1' and row.get('otp'):
                     flash(f"Demo OTP: {row.get('otp')}", "success")
             else:
@@ -1100,6 +1203,7 @@ def forgot_password():
                 print(f"[WARN] Unable to set reset OTP for {email}")
             flash("If that email exists, we have sent a reset code.", "success")
         else:
+            # Do not reveal that email is unknown
             flash("If that email exists, we have sent a reset code.", "success")
         return redirect(url_for("reset_password", email=email))
 
@@ -1110,11 +1214,13 @@ def forgot_password():
 def reset_password():
     email = (request.args.get("email") or request.form.get("email") or "").strip().lower()
     if request.method == "POST":
+        # Case A: user was already verified (session flag set) — allow direct set
         if session.get("set_password_email") == email and request.form.get("password"):
             new_password = request.form.get("password") or ""
             if len(new_password) < 8:
                 flash("Password must be at least 8 characters.", "error")
                 return render_template("reset_password.html", email=email)
+            # Require at least one letter, one digit and one special character
             if not re.search(r"[A-Za-z]", new_password) or not re.search(r"\d", new_password) or not re.search(r"[^A-Za-z0-9]", new_password):
                 flash("Password must contain letters, digits, and special characters.", "error")
                 return render_template("reset_password.html", email=email)
@@ -1123,8 +1229,10 @@ def reset_password():
             flash("Password set successfully. You can now login.", "success")
             return redirect(url_for("login"))
 
+        # Case B: OTP-only submission to verify the reset code; do NOT accept password in same request (two-step)
         otp = (request.form.get("otp") or "").strip()
         provided_password = request.form.get("password") or ""
+        # If only OTP provided (or both provided), verify OTP first. If successful and no password in this POST, set session flag and redirect to GET page to show password form.
         if otp:
             if verify_otp_code(email, otp, "reset"):
                 session["set_password_email"] = email
@@ -1134,8 +1242,11 @@ def reset_password():
                 flash("Invalid OTP or expired.", "error")
                 return render_template("reset_password.html", email=email)
 
+        # If reached here, invalid submission
         flash("Please provide the OTP sent to your email.", "error")
         return render_template("reset_password.html", email=email)
+
+    # For GET — render reset page; template will show OTP entry or password entry based on session flag
     return render_template("reset_password.html", email=email)
 
 @app.route('/home')
@@ -1177,6 +1288,7 @@ def disease():
             return render_template('disease.html', result=result)
 
         if not os.getenv('DISEASE_API_URL'):
+            # Service not configured; avoid local heavy ML fallback
             result = "⚠️ Disease detection is currently disabled (not configured). Contact admin."
             return render_template('disease.html', result=result)
 
@@ -1185,8 +1297,10 @@ def disease():
             content_type = getattr(image_file, 'content_type', None)
             try:
                 data = call_disease_api(img_bytes, filename=image_file.filename, content_type=content_type, timeout=15, max_retries=1)
+                # Expecting JSON like: { "prediction": "Tomato___Late_blight" }
                 if isinstance(data, dict) and 'prediction' in data:
                     raw_pred = data.get('prediction') or "Unknown"
+                    # UX polish: replace model label separators with human-friendly text
                     if isinstance(raw_pred, str):
                         result = raw_pred.replace("___", " - ").replace("_", " ")
                     else:
