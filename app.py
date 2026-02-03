@@ -60,7 +60,8 @@ DB_CONFIG = {
     "password": os.getenv("MYSQL_PASSWORD"),
     "database": os.getenv("MYSQL_DB"),
     "port": int(os.getenv("MYSQL_PORT")),
-    "ssl_disabled": True if os.getenv("MYSQL_SSL_DISABLED", "0") == "1" else False,
+    "ssl_ca": "ca.pem",
+    "connection_timeout": 10
 }
 
 SUPPORTED_LANGS = {
