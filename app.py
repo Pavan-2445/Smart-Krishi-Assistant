@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, jsonify
 import os
+import time
+import socket
 from PIL import Image
 import io
 import joblib
@@ -254,9 +256,21 @@ print(
     DB_CONFIG["port"],
     os.path.exists(DB_CONFIG["ssl_ca"])
 )
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
 
+def get_db(retries=3, delay=2):
+    last_err = None
+    for attempt in range(retries):
+        try:
+            return mysql.connector.connect(**DB_CONFIG)
+        except mysql.connector.Error as e:
+            last_err = e
+            print(f"[DB WARN] DB connect failed (attempt {attempt+1}/{retries}): {e}")
+            time.sleep(delay)
+        except socket.gaierror as e:
+            last_err = e
+            print(f"[DNS WARN] DNS resolution failed (attempt {attempt+1}/{retries}): {e}")
+            time.sleep(delay)
+    raise last_err
 
 # --- SQL-based auth helpers ---
 _auth_schema_ensured = False
@@ -872,11 +886,16 @@ def fetch_forecast(city):
 def index():
     if not session.get("lang"):
         return redirect(url_for("language"))
-    # After choosing language, push to auth first.
+
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    # Only now hit DB
     user = get_current_user()
     if not user:
         session.pop("user_id", None)
         return redirect(url_for("login"))
+
     return redirect(url_for("home"))
 
 
