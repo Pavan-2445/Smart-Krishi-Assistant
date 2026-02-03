@@ -25,6 +25,17 @@ app = Flask(__name__)
 load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
+def wake_disease_api():
+    url = os.getenv("DISEASE_API_URL")
+    if not url:
+        return
+    try:
+        health_url = url.replace("/predict", "/")
+        requests.get(health_url, timeout=3)
+        print("[INFO] Disease API wake-up ping sent")
+    except Exception as e:
+        print(f"[WARN] Disease API wake-up failed: {e}")
+
 # Validate Brevo API key early to surface auth errors quickly (non-fatal). This avoids repeatedly
 # attempting sends with an obviously invalid/placeholder key and logs a clear message at startup.
 def validate_brevo_key():
@@ -1116,6 +1127,8 @@ def login():
                     return render_template("login.html")
                 # Successful farmer login
                 session["user_id"] = user["id"]
+                threading.Thread(target=wake_disease_api, daemon=True).start()
+
                 flash("Logged in successfully.", "success")
                 next_url = request.args.get("next") or url_for("home")
                 return redirect(next_url)
@@ -1277,6 +1290,7 @@ def reset_password():
 @app.route('/home')
 @login_required
 def home():
+    threading.Thread(target=wake_disease_api, daemon=True).start()
     return render_template('home.html')
 
 @app.route('/crop', methods=['GET', 'POST'])
@@ -1332,6 +1346,8 @@ def disease():
                         result = str(raw_pred)
                 else:
                     result = "⚠️ Unexpected response from disease service."
+            except requests.exceptions.RequestException:
+                result = "⏳ Disease service is waking up. Please wait 10–15 seconds and try again."
             except requests.exceptions.Timeout:
                 result = "⚠️ Disease service timed out. Please try again later."
             except requests.exceptions.RequestException as rexc:
