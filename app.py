@@ -399,7 +399,7 @@ def create_user(name: str, email: str = None, password: str = None, age: str = "
         try:
             db.rollback()
         except Exception:
-            pass)
+            pass
         try:
             cur.execute(
                 """
